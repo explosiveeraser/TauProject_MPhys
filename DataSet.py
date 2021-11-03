@@ -13,9 +13,10 @@ class DataSet():
         initialDFrame = initialDFrame.Define('LargeR_event', 'largeRjet_n>0')
         initialDFrame = initialDFrame.Define('Tau_event', 'tau_n>0')
         self.DFrame = initialDFrame
-        self.filters = np.array([])
+        self.filters = {}
 
 
     def particle_Filter(self, particle):
         filter = self.DFrame.Filter(str("good"+particle))
-        self.filters = np.append(self.filters, self.DFrame.Filter(filter))
+        self.filters = {}
+
