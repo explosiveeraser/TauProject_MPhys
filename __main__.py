@@ -6,9 +6,6 @@ from ROOT import gROOT
 ROOT.ROOT.EnableImplicitMT()
 ROOT.gStyle.SetOptStat(0)
 
-c1 = ROOT.TCanvas("c1", "Title", 900, 700)
-c1.SetGrid()
-
 mc_file = ROOT.TFile.Open("1lep1tau/MC/mc_341123.ggH125_tautaulh.1lep1tau.root", "READ")
 mc_Tree = mc_file.mini
 
@@ -28,50 +25,67 @@ mc_DFrame = mc_DFrame.Define("goodJet", goodJetCrit)
 mc_DFrame = mc_DFrame.Define("goodTau", goodTauCrit)
 
 """
-Make some histograms of the following values:
-jet_pt and tau_pt (rescaled)
-absolute values of eta for jets and tau (rescaled for tau)
-tau_nTracks
-computed invariant mass for tau (rescaled)
-tau_pt (1 track) and tau_pt (3 tracks) and tau_pt (>3)
-jet_E and tau_E (rescaled) 
+Make histograms
 """
-
-ROOT.gInterpreter.Declare(
-"""
-using Vec_t = const ROOT::VecOps::RVec<float>;
-Vec_t& ComputeInvariantMass(Vec_t& pt, Vec_t& eta, Vec_t& phi, Vec_t& e) {
-    auto fourVecs = ROOT::VecOps::Construct<ROOT::Math::PtEtaPhiE4D<float>>(pt, eta, phi, e);
-    auto M = [](ROOT::Math::PtEtaPhiE4D<float> x) { return x.M();};
-    auto m = ROOT::VecOps::Map(fourVecs, M);
-    return m;
-}
-""")
-
-mc_DFrame = mc_DFrame.Define("tau_m", "ComputeInvariantMass(tau_pt, tau_eta, tau_phi, tau_E)")
 
 histos = {}
 
-histos["jet_pt"] = mc_DFrame.Histo1D("jet_pt")
-histos["tau_pt"] = mc_DFrame.Histo1D("tau_pt", "weight")
-histos["jet_eta"] = mc_DFrame.Define("ajet_eta", "abs(jet_eta)").Histo1D("ajet_eta")
-histos["tau_eta"] = mc_DFrame.Define("atau_eta", "abs(tau_eta)").Histo1D("atau_eta", "weight")
-histos["tau_nTrack"] = mc_DFrame.Histo1D("tau_nTracks")
-histos["tau_m"] = mc_DFrame.Histo1D("tau_m", "weight")
-histos["jet_e"] = mc_DFrame.Histo1D("jet_E")
-histos["tau_e"] = mc_DFrame.Histo1D("tau_E", "weight")
+#jet histos
+for h in ["jet_pt", "jet_E"]:
+    histos[h] = mc_DFrame.Histo1D(ROOT.RDF.TH1DModel(h, h, 128, np.zeros(129, float)), h)
 
+#jet and tau abs(eta) histos
+for h in ["jet_eta", "tau_eta"]:
+    title = str("a"+h)
+    func = str("abs("+h+")")
+    histos[title] = mc_DFrame.Define(title, func).Histo1D(ROOT.RDF.TH1DModel(title, title, 128, np.zeros(129, float)), title)
+
+#rest of tau histos
+for h in ["tau_n", "tau_pt", "tau_phi", "tau_E", "tau_charge", "tau_nTracks",
+          "tau_BDTid", "ditau_m"]:
+    histos[h] = mc_DFrame.Histo1D(ROOT.RDF.TH1DModel(h, h, 128, np.zeros(129, float)), h)
+
+#Other histos
 mc_DFrame = mc_DFrame.Define("one_tau", "tau_nTracks[tau_nTracks == 1]")
 mc_DFrame = mc_DFrame.Define("three_tau", "tau_nTracks[tau_nTracks == 3]")
 mc_DFrame = mc_DFrame.Define("o_tau", "tau_nTracks[tau_nTracks > 3]")
-
 histos["1_tau"] = mc_DFrame.Histo1D("one_tau")
 histos["3_tau"] = mc_DFrame.Histo1D("three_tau")
 histos["o_tau"] = mc_DFrame.Histo1D("o_tau")
+##
 
-d = mc_DFrame.Filter("tau_m").Take("tau_m")
-print(d.Print())
 
+
+#Draw histograms
+c1 = ROOT.TCanvas("c1", "Histograms", 900, 700)
+upperpad = ROOT.TPad("upperpad", "Jet Histograms", 0, 0.75, 1, 1)
+upperpad.Divide(3,1)
+lowerpad = ROOT.TPad("lowerpad", "tau Histograms", 0, 0, 1, 0.75)
+lowerpad.Divide(3,3)
+#
+#
+#
+upperpad.Draw()
+lowerpad.Draw()
+#Draw jet histograms to upperpad
+jet_toDraw = ["jet_pt", "ajet_eta", "jet_E"]
+for i in range(0, len(jet_toDraw)):
+    draw = jet_toDraw[i]
+    upperpad.cd(i+1)
+    histos[draw].Draw()
+
+#Draw tau histograms to lowerpad
+tau_toDraw = ["tau_n","tau_pt", "atau_eta", "tau_phi", "tau_E", "tau_charge", "tau_nTracks",
+              "tau_BDTid", "ditau_m"]
+for i in range(0, len(tau_toDraw)):
+    draw = tau_toDraw[i]
+    lowerpad.cd(i+1)
+    histos[draw].Draw()
+
+#
 c1.Update()
+
+#Save Canvas as PDF
+c1.SaveAs("jet_tau_histograms_041121.pdf")
 
 input("return to stop histos ->")
