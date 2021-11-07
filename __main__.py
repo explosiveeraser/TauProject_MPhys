@@ -6,7 +6,11 @@ from ROOT import gROOT
 ROOT.ROOT.EnableImplicitMT()
 ROOT.gStyle.SetOptStat(0)
 
-mc_file = ROOT.TFile.Open("1lep1tau/MC/mc_341123.ggH125_tautaulh.1lep1tau.root", "READ")
+data_path = "1lep1tau/Data/"
+MC_path = "1lep1tau/MC/"
+TFile_name = "data_A.1lep1tau.root"
+
+mc_file = ROOT.TFile.Open(str(data_path+TFile_name), "READ")
 mc_Tree = mc_file.mini
 
 mc_DFrame = ROOT.RDataFrame(mc_Tree)
@@ -40,8 +44,12 @@ for h in ["jet_eta", "tau_eta"]:
     func = str("abs("+h+")")
     histos[title] = mc_DFrame.Define(title, func).Histo1D(ROOT.RDF.TH1DModel(title, title, 128, np.zeros(129, float)), title)
 
+histos["tau_n"] = mc_DFrame.Histo1D(ROOT.RDF.TH1DModel("tau_n", "tau_n", 128, 0, 2), "tau_n")
+
+histos["tau_n"].Print()
+
 #rest of tau histos
-for h in ["tau_n", "tau_pt", "tau_phi", "tau_E", "tau_charge", "tau_nTracks",
+for h in ["tau_pt", "tau_phi", "tau_E", "tau_charge", "tau_nTracks",
           "tau_BDTid", "ditau_m"]:
     histos[h] = mc_DFrame.Histo1D(ROOT.RDF.TH1DModel(h, h, 128, np.zeros(129, float)), h)
 
@@ -57,26 +65,30 @@ histos["o_tau"] = mc_DFrame.Histo1D("o_tau")
 
 
 #Draw histograms
-c1 = ROOT.TCanvas("c1", "Histograms", 900, 700)
-upperpad = ROOT.TPad("upperpad", "Jet Histograms", 0, 0.75, 1, 1)
+c1 = ROOT.TCanvas("c1", "Histograms", 1200, 750)
+
+#
+upperpad = ROOT.TPad("upperpad", "Jet Histograms", 0.0, 0.75, 1.0, 1.0)
 upperpad.Divide(3,1)
-lowerpad = ROOT.TPad("lowerpad", "tau Histograms", 0, 0, 1, 0.75)
-lowerpad.Divide(3,3)
-#
-#
-#
 upperpad.Draw()
+
+#
+lowerpad = ROOT.TPad("lowerpad", "tau Histograms", 0.0, 0.0, 1.0, 0.75)
+lowerpad.Divide(3,3)
 lowerpad.Draw()
+
 #Draw jet histograms to upperpad
 jet_toDraw = ["jet_pt", "ajet_eta", "jet_E"]
 for i in range(0, len(jet_toDraw)):
+    print(i)
     draw = jet_toDraw[i]
     upperpad.cd(i+1)
     histos[draw].Draw()
 
 #Draw tau histograms to lowerpad
-tau_toDraw = ["tau_n","tau_pt", "atau_eta", "tau_phi", "tau_E", "tau_charge", "tau_nTracks",
+tau_toDraw = ["tau_n", "tau_pt", "atau_eta", "tau_phi", "tau_E", "tau_charge", "tau_nTracks",
               "tau_BDTid", "ditau_m"]
+
 for i in range(0, len(tau_toDraw)):
     draw = tau_toDraw[i]
     lowerpad.cd(i+1)
@@ -86,6 +98,6 @@ for i in range(0, len(tau_toDraw)):
 c1.Update()
 
 #Save Canvas as PDF
-c1.SaveAs("jet_tau_histograms_041121.pdf")
+c1.SaveAs(str("jet_tau_histograms_041121"+TFile_name+".pdf"))
 
 input("return to stop histos ->")
