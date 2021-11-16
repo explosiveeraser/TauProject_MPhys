@@ -5,6 +5,10 @@ from ROOT import gROOT
 import numba
 from numba import jit, jit_module
 from event_gen.process_MCdata import *
+import subprocess
+
+ROOT.gSystem.Load("install/lib/libDelphes")
+
 
 #ROOT.ROOT.EnableImplicitMT()
 ROOT.gStyle.SetOptStat(0)
@@ -14,6 +18,12 @@ signal_dir = "Delphes_Signal"
 
 back_chain = read_tree_files(background_dir)
 sig_chain = read_tree_files(signal_dir)
+
+back_reader = ROOT.ExRootTreeReader(back_chain)
+
+
+
+
 
 back_df = ROOT.RDataFrame(back_chain)
 sig_df = ROOT.RDataFrame(sig_chain)

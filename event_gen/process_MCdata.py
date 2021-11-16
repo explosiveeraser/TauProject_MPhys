@@ -5,6 +5,8 @@ import os, os.path
 from numba import int32
 import numba
 
+ROOT.gSystem.Load("install/lib/libDelphes")
+
 @ROOT.Numba.Declare(['RVec<unsigned int>'], 'RVec<int>')
 def find_tagged_jets(tautag):
     pntr=np.array([int32(0)])
