@@ -4,7 +4,7 @@ from ROOT import gROOT
 import numba
 from numba import jit, jit_module
 import os, os.path
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 ROOT.gSystem.Load("install/lib/libDelphes")
 
@@ -19,10 +19,10 @@ class Events(ROOT.TNamed):
 
 
 class Event(ROOT.TNamed):
-    def __init__(self, name, title, event_obj, weight):
+    def __init__(self, name, title, event_obj, weight, entry):
         self.name = name
         self.title = title
-        self.Number = event_obj.Number
+        self.Number = entry
         self.ReadTime = event_obj.ReadTime
         self.ProcTime = event_obj.ProcTime
         self.EvtWeight = weight.Weight
@@ -43,12 +43,18 @@ class Event(ROOT.TNamed):
             self.Jets.Add(Jet(self.name, self.name, jet_obj, tracks, towers))
             return True
 
+ROOT.gInterpreter.Declare('''
+ROOT::Math::PxPyPzE4D<float> set_vec(float px, float py, float pz, float E) {
+    auto vec = ROOT::Math::PxPyPzE4D<float>(px, py, pz, E);
+    return vec;
+}
+''')
 
 class Jet(ROOT.TNamed):
     def __init__(self, name, title, jet_obj, track_ref, tower_ref):
         self.name = name
         self.title = title
-        self.fUniqueID = jet_obj.fUniqueID
+        #self.fUniqueID = jet_obj.fUniqueID
         self.PT = jet_obj.PT
         self.Eta = jet_obj.Eta
         self.Phi = jet_obj.Phi
@@ -57,7 +63,7 @@ class Jet(ROOT.TNamed):
         self.DeltaEta = jet_obj.DeltaEta
         self.DeltaPhi = jet_obj.DeltaPhi
         self.Flavor = jet_obj.Flavor
-        self.FlavorAlgo = jet_obj.Algo
+        self.FlavorAlgo = jet_obj.FlavorAlgo
         self.FlavorPhys = jet_obj.FlavorPhys
         self.BTag = jet_obj.BTag
         self.BTagAlgo = jet_obj.BTagAlgo
@@ -87,7 +93,7 @@ class Jet(ROOT.TNamed):
 
     def Set_4Vectors(self, array):
         total = array[0]
-        vector = ROOT.Math.PxPyPzE4D(array[1],array[2],array[3],array[4])
+        vector = ROOT.set_vec(array[1], array[2], array[3], array[4])
         return total, vector
 
 
@@ -95,7 +101,7 @@ class Track(ROOT.TNamed):
     def __init__(self, name, title, track_obj):
         self.name = name
         self.title = title
-        self.fUniqueID = track_obj.fUniqueID
+        #self.fUniqueID = track_obj.fUniqueID
         self.PID = track_obj.PID
         self.Charge = track_obj.Charge
         self.P = track_obj.P
@@ -156,7 +162,7 @@ class Tower(ROOT.TNamed):
         self.T = tower_obj.T
         self.NTimeHits = tower_obj.NTimeHits
         self.Eem = tower_obj.Eem
-        self.Etrk = tower_obj.Etrk
+        self.Ehad = tower_obj.Ehad
         self.Edges = tower_obj.Edges
 
 
@@ -203,30 +209,30 @@ class Dataset():
         track = self.reader.UseBranch("Track")
         #vertex = self.reader.UseBranch("Vertex")
         print("Reading in physics objects.")
-        for entry in tqdm(range(0, nev)):
+        for entry in trange(nev, desc="Event Loop."):
             self.reader.ReadEntry(entry)
-            w = weight.At(entry)
-            evt = event.At(entry)
-            new_event = Event(str("Event_"+entry), str("Event_"+entry), evt, w)
-            for j_i in tqdm(range(0, jet.GetEntries())):
+            w = weight.At(0)
+            evt = event.At(0)
+            new_event = Event("Event_"+str(entry), "Event_"+str(entry), evt, w, entry)
+            for j_i in range(0, jet.GetEntries()):
                 jet_obj = jet.At(j_i)
                 jet_constituents = jet_obj.Constituents
                 towers = ROOT.TObjArray()
                 tracks = ROOT.TObjArray()
-                for c_i in tqdm(range(0, jet_constituents.GetEntries())):
+                for c_i in range(0, jet_constituents.GetEntries()):
                     const = jet_constituents.At(c_i)
                     if const.ClassName() == "Tower":
-                        new_tower = Tower(const)
+                        new_tower = Tower("Constituent_"+str(c_i), "Constituent_"+str(c_i),const)
                         new_event.add_tower(new_tower)
                         towers.Add(new_tower)
-                        print(str("added tower (con no:"+c_i+") to jet "+j_i))
+                        #print("added tower (con no:"+str(c_i)+") to jet "+str(j_i))
                     elif const.ClassName() == "Track":
-                        new_track = Track(const)
+                        new_track = Track("Constituent_"+str(c_i), "Constituent_"+str(c_i), const)
                         new_event.add_track(new_track)
                         tracks.Add(new_track)
-                        print(str("added track (con no:" + c_i + ") to jet " + j_i))
+                        #print("added track (con no:" + str(c_i) + ") to jet " + str(j_i))
                 new_event.build_jet(jet_obj, towers, tracks)
-                print(str("Completed jet: "+j_i))
+                #print("Completed jet: "+str(j_i))
             self.Events.add_event(new_event)
-        print("Constructed {} dataset with {} trees and {} total events.".format(self.name, self.chain.GetNtrees(), nev))
+        #print("Constructed {} dataset with {} trees and {} total events.".format(self.name, self.chain.GetNtrees(), nev))
 
