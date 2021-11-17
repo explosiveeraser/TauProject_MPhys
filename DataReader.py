@@ -4,18 +4,50 @@ from ROOT import gROOT
 import numba
 from numba import jit, jit_module
 import os, os.path
+from tqdm import tqdm
 
 ROOT.gSystem.Load("install/lib/libDelphes")
 
-class Event(ROOT.TNamed):
+class Events(ROOT.TNamed):
     def __init__(self, name, title):
         self.name = name
         self.title = title
+        self.Events = ROOT.TObjArray()
 
+    def add_event(self, event):
+        self.Events.Add(event)
+
+
+class Event(ROOT.TNamed):
+    def __init__(self, name, title, event_obj, weight):
+        self.name = name
+        self.title = title
+        self.Number = event_obj.Number
+        self.ReadTime = event_obj.ReadTime
+        self.ProcTime = event_obj.ProcTime
+        self.EvtWeight = weight.Weight
+        self.Tracks = ROOT.TObjArray()
+        self.Towers = ROOT.TObjArray()
+        self.Jets = ROOT.TObjArray()
+
+    def add_track(self, track):
+        self.Tracks.Add(track)
+
+    def add_tower(self, tower):
+        self.Towers.Add(tower)
+
+    def build_jet(self, jet_obj, towers, tracks):
+        if towers.IsEmpty() and tracks.IsEmpty():
+            return AssertionError
+        elif not towers.IsEmpty() or not tracks.IsEmpty():
+            self.Jets.Add(Jet(self.name, self.name, jet_obj, tracks, towers))
+            return True
 
 
 class Jet(ROOT.TNamed):
-    def __init__(self, jet_obj, track_ref, tower_ref):
+    def __init__(self, name, title, jet_obj, track_ref, tower_ref):
+        self.name = name
+        self.title = title
         self.fUniqueID = jet_obj.fUniqueID
         self.PT = jet_obj.PT
         self.Eta = jet_obj.Eta
@@ -117,9 +149,37 @@ class Tower(ROOT.TNamed):
     def __init__(self, name, title, tower_obj):
         self.name = name
         self.title = title
+        self.ET = tower_obj.ET
+        self.Eta = tower_obj.Eta
+        self.Phi = tower_obj.Phi
+        self.E = tower_obj.E
+        self.T = tower_obj.T
+        self.NTimeHits = tower_obj.NTimeHits
+        self.Eem = tower_obj.Eem
+        self.Etrk = tower_obj.Etrk
+        self.Edges = tower_obj.Edges
 
 
-
+"""class Vertex(ROOT.TNamed):
+    def __init__(self, name, title, v_obj):
+        self.name = name
+        self.title = title
+        self.T = v_obj.T
+        self.X = v_obj.X
+        self.Y = v_obj.Y
+        self.Z = v_obj.Z
+        self.ErrorT = v_obj.ErrorT
+        self.ErrorX = v_obj.ErrorX
+        self.ErrorY = v_obj.ErrorY
+        self.ErrorZ = v_obj.ErrorZ
+        self.Index = v_obj.Index
+        self.NDF = v_obj.NDF
+        self.Sigma = v_obj.Sigma
+        self.SumPT2 = v_obj.SumPT2
+        self.GenDeltaZ = v_obj.GenDeltaZ
+        self.BTVSumPT2 = v_obj.BTVSumPT2
+        
+"""
 
 
 class Dataset():
@@ -129,6 +189,7 @@ class Dataset():
         else:
             self.name = directory
             directory = directory + "/"
+        self.Events = Events(self.name, self.name)
         self.chain = ROOT.TChain("Delphes")
         for f in os.listdir(directory):
             self.chain.Add(directory+f)
@@ -136,8 +197,36 @@ class Dataset():
         ###
         nev = self.reader.GetEntries()
         event = self.reader.UseBranch("Event")
+        weight = self.reader.UseBranch("Weight")
         jet = self.reader.UseBranch("Jet")
         tower = self.reader.UseBranch("Tower")
         track = self.reader.UseBranch("Track")
-        vertex = self.reader.UseBranch("Vertex")
+        #vertex = self.reader.UseBranch("Vertex")
+        print("Reading in physics objects.")
+        for entry in tqdm(range(0, nev)):
+            self.reader.ReadEntry(entry)
+            w = weight.At(entry)
+            evt = event.At(entry)
+            new_event = Event(str("Event_"+entry), str("Event_"+entry), evt, w)
+            for j_i in tqdm(range(0, jet.GetEntries())):
+                jet_obj = jet.At(j_i)
+                jet_constituents = jet_obj.Constituents
+                towers = ROOT.TObjArray()
+                tracks = ROOT.TObjArray()
+                for c_i in tqdm(range(0, jet_constituents.GetEntries())):
+                    const = jet_constituents.At(c_i)
+                    if const.ClassName() == "Tower":
+                        new_tower = Tower(const)
+                        new_event.add_tower(new_tower)
+                        towers.Add(new_tower)
+                        print(str("added tower (con no:"+c_i+") to jet "+j_i))
+                    elif const.ClassName() == "Track":
+                        new_track = Track(const)
+                        new_event.add_track(new_track)
+                        tracks.Add(new_track)
+                        print(str("added track (con no:" + c_i + ") to jet " + j_i))
+                new_event.build_jet(jet_obj, towers, tracks)
+                print(str("Completed jet: "+j_i))
+            self.Events.add_event(new_event)
+        print("Constructed {} dataset with {} trees and {} total events.".format(self.name, self.chain.GetNtrees(), nev))
 
