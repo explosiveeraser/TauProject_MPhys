@@ -5,6 +5,10 @@ import os, os.path
 from numba import int32
 import numba
 
+"""
+Load delphes shared library located in 
+delphes install library directory
+"""
 ROOT.gSystem.Load("install/lib/libDelphes")
 
 @ROOT.Numba.Declare(['RVec<unsigned int>'], 'RVec<int>')
@@ -22,6 +26,11 @@ def read_tree_files(dir_name):
     for f in os.listdir(dir_loc):
         chain.Add(str(dir_loc+f))
     return chain
+
+def prepare_dataframe(data_name ,reader):
+    data_dict = {}
+
+
 
 def get_hist(column, type, xbins):
     th1d = ROOT.RDF.TH1DModel
