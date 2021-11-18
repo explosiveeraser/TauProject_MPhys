@@ -190,6 +190,8 @@ class Tower(ROOT.TNamed):
 
 class Dataset():
     def __init__(self, directory):
+        c1 = ROOT.TCanvas()
+
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -200,11 +202,17 @@ class Dataset():
         for f in os.listdir(directory):
             self.chain.Add(directory+f)
         self.reader = ROOT.ExRootTreeReader(self.chain)
-        ###
+        branches = self.chain.GetListOfBranches()
+        self.columns = {}
+        self.Histos = {}
+        self.Histos["Jet"] = {}
+        self.Histos["Tower"] = {}
+        self.Histos["Track"] = {}
         nev = self.reader.GetEntries()
         event = self.reader.UseBranch("Event")
         weight = self.reader.UseBranch("Weight")
         jet = self.reader.UseBranch("Jet")
+        print(self.reader.GetInfo("Jet"))
         tower = self.reader.UseBranch("Tower")
         track = self.reader.UseBranch("Track")
         #vertex = self.reader.UseBranch("Vertex")
@@ -212,6 +220,7 @@ class Dataset():
         for entry in trange(nev, desc="Event Loop."):
             self.reader.ReadEntry(entry)
             w = weight.At(0)
+            w_e = w.Weight
             evt = event.At(0)
             new_event = Event("Event_"+str(entry), "Event_"+str(entry), evt, w, entry)
             for j_i in range(0, jet.GetEntries()):
@@ -225,14 +234,34 @@ class Dataset():
                         new_tower = Tower("Constituent_"+str(c_i), "Constituent_"+str(c_i),const)
                         new_event.add_tower(new_tower)
                         towers.Add(new_tower)
+                        self.build_histogram(new_tower, w_e)
                         #print("added tower (con no:"+str(c_i)+") to jet "+str(j_i))
                     elif const.ClassName() == "Track":
                         new_track = Track("Constituent_"+str(c_i), "Constituent_"+str(c_i), const)
                         new_event.add_track(new_track)
                         tracks.Add(new_track)
+                        self.build_histogram(new_track, w_e)
                         #print("added track (con no:" + str(c_i) + ") to jet " + str(j_i))
                 new_event.build_jet(jet_obj, towers, tracks)
+                self.build_histogram(new_event.Jets.At(j_i))
                 #print("Completed jet: "+str(j_i))
             self.Events.add_event(new_event)
+        self.update_histograms()
         #print("Constructed {} dataset with {} trees and {} total events.".format(self.name, self.chain.GetNtrees(), nev))
 
+    def build_histogram(self, object, weight):
+        cls_name = str(type(object))
+        prop = object.__dict__
+        attr_n = prop.keys()
+        for key in attr_n:
+            if str(prop[key].isnumeric()):
+                try:
+                    self.Histos[cls_name][key].Fill(prop[key])
+                except:
+                    self.Histos[cls_name][key] = ROOT.TH1F(str(cls_name+"_"+key), str(cls_name+"_"+key), 128, np.zeros(129))
+                    self.Histos[cls_name][key].Fill(prop[key])
+
+    def update_histograms(self):
+        for cls in self.Histos:
+            for prop in self.Histos[cls]:
+                self.Histos[cls][prop].Scale(1.)
