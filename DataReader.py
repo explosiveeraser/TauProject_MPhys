@@ -12,7 +12,8 @@ class Events(ROOT.TNamed):
     def __init__(self, name, title):
         self.name = name
         self.title = title
-        self.Events = ROOT.TObjArray()
+        self.Events = ROOT.THashList()
+        self.df = ROOT.RDataFrame(0)
 
     def add_event(self, event):
         self.Events.Add(event)
@@ -26,9 +27,9 @@ class Event(ROOT.TNamed):
         self.ReadTime = event_obj.ReadTime
         self.ProcTime = event_obj.ProcTime
         self.EvtWeight = weight.Weight
-        self.Tracks = ROOT.TObjArray()
-        self.Towers = ROOT.TObjArray()
-        self.Jets = ROOT.TObjArray()
+        self.Tracks = ROOT.THashList()
+        self.Towers = ROOT.THashList()
+        self.Jets = ROOT.THashList()
 
     def add_track(self, track):
         self.Tracks.Add(track)
@@ -189,9 +190,7 @@ class Tower(ROOT.TNamed):
 
 
 class Dataset():
-    def __init__(self, directory):
-        c1 = ROOT.TCanvas()
-
+    def __init__(self, directory, get_Histos=False):
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -199,16 +198,13 @@ class Dataset():
             directory = directory + "/"
         self.Events = Events(self.name, self.name)
         self.chain = ROOT.TChain("Delphes")
+        self.chain.SetMaxEntryLoop(numba.longlong(5000.))
         for f in os.listdir(directory):
             self.chain.Add(directory+f)
         self.reader = ROOT.ExRootTreeReader(self.chain)
         branches = self.chain.GetListOfBranches()
         self.columns = {}
-        self.Histos = {}
-        self.Histos["Jet"] = {}
-        self.Histos["Tower"] = {}
-        self.Histos["Track"] = {}
-        nev = self.reader.GetEntries()
+        nev = self.reader.GetEntries() - 49000
         event = self.reader.UseBranch("Event")
         weight = self.reader.UseBranch("Weight")
         jet = self.reader.UseBranch("Jet")
@@ -217,6 +213,7 @@ class Dataset():
         track = self.reader.UseBranch("Track")
         #vertex = self.reader.UseBranch("Vertex")
         print("Reading in physics objects.")
+        self.Evt_array = {}
         for entry in trange(nev, desc="Event Loop."):
             self.reader.ReadEntry(entry)
             w = weight.At(0)
@@ -234,34 +231,22 @@ class Dataset():
                         new_tower = Tower("Constituent_"+str(c_i), "Constituent_"+str(c_i),const)
                         new_event.add_tower(new_tower)
                         towers.Add(new_tower)
-                        self.build_histogram(new_tower, w_e)
-                        #print("added tower (con no:"+str(c_i)+") to jet "+str(j_i))
                     elif const.ClassName() == "Track":
                         new_track = Track("Constituent_"+str(c_i), "Constituent_"+str(c_i), const)
                         new_event.add_track(new_track)
                         tracks.Add(new_track)
-                        self.build_histogram(new_track, w_e)
-                        #print("added track (con no:" + str(c_i) + ") to jet " + str(j_i))
                 new_event.build_jet(jet_obj, towers, tracks)
-                self.build_histogram(new_event.Jets.At(j_i))
-                #print("Completed jet: "+str(j_i))
             self.Events.add_event(new_event)
-        self.update_histograms()
-        #print("Constructed {} dataset with {} trees and {} total events.".format(self.name, self.chain.GetNtrees(), nev))
+        print("Constructed {} dataset with {} trees and {} total events.".format(self.name, self.chain.GetNtrees(), nev))
+        if get_Histos:
+            self.Histos = {}
+            for cls in ["Jet", "Tower", "Track"]:
+                self.build_histogram(cls)
 
-    def build_histogram(self, object, weight):
-        cls_name = str(type(object))
-        prop = object.__dict__
-        attr_n = prop.keys()
-        for key in attr_n:
-            if str(prop[key].isnumeric()):
-                try:
-                    self.Histos[cls_name][key].Fill(prop[key])
-                except:
-                    self.Histos[cls_name][key] = ROOT.TH1F(str(cls_name+"_"+key), str(cls_name+"_"+key), 128, np.zeros(129))
-                    self.Histos[cls_name][key].Fill(prop[key])
 
-    def update_histograms(self):
-        for cls in self.Histos:
-            for prop in self.Histos[cls]:
-                self.Histos[cls][prop].Scale(1.)
+    def build_histogram(self, cls_name):
+        if cls_name not in self.Histos.keys():
+            self.Histos[cls_name] = {}
+        print(self.Events.Events.GetListForObject("Jets").GetListForObject("Jet.E"))
+
+
