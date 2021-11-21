@@ -12,8 +12,7 @@ class Events(ROOT.TNamed):
     def __init__(self, name, title):
         self.name = name
         self.title = title
-        self.Events = ROOT.THashList()
-        self.df = ROOT.RDataFrame(0)
+        self.Events = ROOT.TObjArray()
 
     def add_event(self, event):
         self.Events.Add(event)
@@ -27,9 +26,9 @@ class Event(ROOT.TNamed):
         self.ReadTime = event_obj.ReadTime
         self.ProcTime = event_obj.ProcTime
         self.EvtWeight = weight.Weight
-        self.Tracks = ROOT.THashList()
-        self.Towers = ROOT.THashList()
-        self.Jets = ROOT.THashList()
+        self.Tracks = ROOT.TObjArray()
+        self.Towers = ROOT.TObjArray()
+        self.Jets = ROOT.TObjArray()
 
     def add_track(self, track):
         self.Tracks.Add(track)

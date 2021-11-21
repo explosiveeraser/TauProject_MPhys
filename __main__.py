@@ -1,12 +1,12 @@
 import numpy as np
-from ROOT import *
+from DataSet_Reader import Dataset
+import ROOT
 from ROOT import gROOT
 import numba
 from numba import jit, jit_module
 import os, os.path
-from event_gen.process_MCdata import *
-from DataReader import Dataset
-from tqdm import tqdm
+from tqdm import tqdm, trange
+
 
 """
 Load delphes shared library located in 
@@ -17,70 +17,52 @@ ROOT.gSystem.Load("install/lib/libDelphes")
 # ROOT.ROOT.EnableImplicitMT()
 ROOT.gStyle.SetOptStat(0)
 
-background = Dataset("Delphes_Background/", get_Histos=True)
-signal = Dataset("Delphes_Signal/", get_Histos=True)
+back_data = Dataset("Delphes_Background/")
+sig_data = Dataset("Delphes_Signal/")
 
-def build_stacks(Histos1, Histos2):
-    Histos_Stacks = {}
-    no_hists = 0
-    for phys_obj in Histos1:
-        Histos_Stacks[phys_obj] = {}
-        for prop in Histos1[phys_obj]:
-            name = str(phys_obj+prop)
-            Histos_Stacks[phys_obj][prop] = {"Histo": ROOT.THStack(name, name), "Kolmogorov": 0.}
-            Histos_Stacks[phys_obj][prop]["Histo"].Add(Histos1[phys_obj][prop])
-            Histos_Stacks[phys_obj][prop]["Histo"].Add(Histos2[phys_obj][prop])
-            print(Histos1[phys_obj][prop].GetMaximumBin())
-            if Histos1[phys_obj][prop].Integral() != 0.:
-                K_test =  Histos1[phys_obj][prop].KolmogorovTest(Histos2[phys_obj][prop])
-            else:
-                K_test = 0.
-            Histos_Stacks[phys_obj][prop]["Kolmogorov"] = K_test
-            no_hists += 1
-    return Histos_Stacks, no_hists
+def Stacker(Hist_1, Hist_2):
+    Stack = {}
+    i = 0
+    for branch in Hist_1.keys():
+        for leaf in Hist_1[branch].keys():
+            name = branch +"."+leaf
+            Stack[name] = ROOT.THStack(name, name)
+            Stack[name].Add(Hist_1[branch][leaf])
+            Stack[name].Add(Hist_2[branch][leaf])
+            i += 1
+    return Stack, i
 
-def canvas_builder(no_obj, div=[3, 3]):
-    print(no_obj)
-    no_canvases = np.ceil(no_obj/(div[0]*div[1]))#
+def Canvas_Maker(no_stacks, div=[3,3]):
+    num_iC = div[0]*div[1]
+    num_canvases = no_stacks//num_iC
+    num_left = no_stacks % num_iC
     canvases = {}
-    for i in range(0, np.int(no_canvases)):
-        canvases["Canvas_"+str(i)] = ROOT.TCanvas("Canvas_"+str(i), "Canvas_"+str(i))
-        canvases["Canvas_"+str(i)].Divide(div[0], div[1])
-        print("Canvas_"+str(i))
-    return canvases
+    for canvas_no in trange(num_canvases):
+        name = "Canvas_"+str(canvas_no)
+        canvases[name] = ROOT.TCanvas(name, name)
+        canvases[name].Divide(div)
+    last_name = "Canvas_"+ str(num_canvases+1)
+    canvases[last_name] = ROOT.TCanvas(last_name, last_name)
+    canvases[last_name].Divide(1, num_left)
+    return canvases, num_iC+1, num_left
 
+stacks, num = Stacker(back_data.Histograms, sig_data.Histograms)
+canvases, last, in_last = Canvas_Maker(num)
 
+text = ROOT.TText(.5, .5, "Plots")
 
+stack_it = iter(stacks)
+for canvas in canvases.keys():
+    canvases[canvas].cd(0)
+    if canvas != last:
+        for i in range(1, 9):
+            canvases[canvas].cd(i)
+            stack_it.Draw()
+            next(stack_it)
+    else:
+        for i in range(1, in_last):
+            canvases[canvas].cd[i]
+            stack_it.Draw()
+            next(stack_it)
 
-Histo_Stacks, no_hists = build_stacks(background.Histos, signal.Histos)
-
-has_plotted = False
-canvases = canvas_builder(no_hists)
-print(canvases.keys())
-text = ROOT.TText()
-text.SetTextFont(25)
-text.SetTextAlign(21)
-
-hists_on_canvas = 1
-current_canvas = 0
-for obj in tqdm(Histo_Stacks):
-    canvases["Canvas_" + str(current_canvas)].cd(0)
-    for prop in Histo_Stacks[obj]:
-        if hists_on_canvas < 9:
-            hists_on_canvas += 1
-            canvases["Canvas_"+str(current_canvas)].cd(hists_on_canvas)
-            text.DrawTextNDC(.5, .95, str(Histo_Stacks[obj][prop]["Kolmogorov"]))
-            Histo_Stacks[obj][prop]["Histo"].Draw()
-        else:
-            hists_on_canvas += 1
-            canvases["Canvas_" + str(current_canvas)].cd(hists_on_canvas)
-            text.DrawTextNDC(.5, .95, str(Histo_Stacks[obj][prop]["Kolmogorov"]))
-            Histo_Stacks[obj][prop]["Histo"].Draw()
-            hists_on_canvas = 0
-            current_canvas += 1
-    canvases["Canvas_"+str(current_canvas)].Update()
-
-input("blob")
-
-
-
+input("Enter to quit")
