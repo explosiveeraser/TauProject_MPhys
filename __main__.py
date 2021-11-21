@@ -26,10 +26,13 @@ def Stacker(Hist_1, Hist_2):
     for branch in Hist_1.keys():
         for leaf in Hist_1[branch].keys():
             name = branch +"."+leaf
-            Stack[name] = ROOT.THStack(name, name)
-            Stack[name].Add(Hist_1[branch][leaf])
-            Stack[name].Add(Hist_2[branch][leaf])
-            i += 1
+            if Hist_1[branch][leaf] != None and Hist_2[branch][leaf] != None:
+                Stack[name] = ROOT.THStack(name, name)
+                Stack[name].Add(Hist_1[branch][leaf])
+                Stack[name].Add(Hist_2[branch][leaf])
+                i += 1
+            else:
+                pass
     return Stack, i
 
 def Canvas_Maker(no_stacks, div=[3,3]):
@@ -40,7 +43,7 @@ def Canvas_Maker(no_stacks, div=[3,3]):
     for canvas_no in trange(num_canvases):
         name = "Canvas_"+str(canvas_no)
         canvases[name] = ROOT.TCanvas(name, name)
-        canvases[name].Divide(div)
+        canvases[name].Divide(div[0], div[1])
     last_name = "Canvas_"+ str(num_canvases+1)
     canvases[last_name] = ROOT.TCanvas(last_name, last_name)
     canvases[last_name].Divide(1, num_left)
@@ -50,19 +53,20 @@ stacks, num = Stacker(back_data.Histograms, sig_data.Histograms)
 canvases, last, in_last = Canvas_Maker(num)
 
 text = ROOT.TText(.5, .5, "Plots")
-
-stack_it = iter(stacks)
+hists_items = list(stacks.items())
+print(hists_items)
+j = 0
 for canvas in canvases.keys():
     canvases[canvas].cd(0)
     if canvas != last:
         for i in range(1, 9):
             canvases[canvas].cd(i)
-            stack_it.Draw()
-            next(stack_it)
+            hists_items[j][1].Draw()
+            j += 1
     else:
         for i in range(1, in_last):
             canvases[canvas].cd[i]
-            stack_it.Draw()
-            next(stack_it)
+            hists_items[j].Draw()
+            j += 1
 
 input("Enter to quit")
