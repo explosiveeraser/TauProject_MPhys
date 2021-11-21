@@ -7,7 +7,6 @@ from numba import jit, jit_module
 import os, os.path
 from tqdm import tqdm, trange
 
-
 """
 Load delphes shared library located in 
 delphes install library directory
@@ -17,56 +16,46 @@ ROOT.gSystem.Load("install/lib/libDelphes")
 # ROOT.ROOT.EnableImplicitMT()
 ROOT.gStyle.SetOptStat(0)
 
-back_data = Dataset("Delphes_Background/")
-sig_data = Dataset("Delphes_Signal/")
+back_dir = "Delphes_Background/"
+sig_dir = "Delphes_Signal/"
 
-def Stacker(Hist_1, Hist_2):
-    Stack = {}
-    i = 0
-    for branch in Hist_1.keys():
-        for leaf in Hist_1[branch].keys():
-            name = branch +"."+leaf
-            if Hist_1[branch][leaf] != None and Hist_2[branch][leaf] != None:
-                Stack[name] = ROOT.THStack(name, name)
-                Stack[name].Add(Hist_1[branch][leaf])
-                Stack[name].Add(Hist_2[branch][leaf])
-                i += 1
-            else:
-                pass
-    return Stack, i
+back_data = Dataset(back_dir)
+sig_data = Dataset(sig_dir)
 
-def Canvas_Maker(no_stacks, div=[3,3]):
-    num_iC = div[0]*div[1]
-    num_canvases = no_stacks//num_iC
-    num_left = no_stacks % num_iC
-    canvases = {}
-    for canvas_no in trange(num_canvases):
-        name = "Canvas_"+str(canvas_no)
-        canvases[name] = ROOT.TCanvas(name, name)
-        canvases[name].Divide(div[0], div[1])
-    last_name = "Canvas_"+ str(num_canvases+1)
-    canvases[last_name] = ROOT.TCanvas(last_name, last_name)
-    canvases[last_name].Divide(1, num_left)
-    return canvases, num_iC+1, num_left
-
-stacks, num = Stacker(back_data.Histograms, sig_data.Histograms)
-canvases, last, in_last = Canvas_Maker(num)
+canvases = {}
+canvases["Canvas_0"] = ROOT.TCanvas("Canvas_0", "Canvas_0")
+canvases["Canvas_0"].Divide(3,3)
+canvases["Canvas_0"].cd(0)
 
 text = ROOT.TText(.5, .5, "Plots")
-hists_items = list(stacks.items())
-print(hists_items)
-j = 0
-for canvas in canvases.keys():
-    canvases[canvas].cd(0)
-    if canvas != last:
-        for i in range(1, 9):
-            canvases[canvas].cd(i)
-            hists_items[j][1].Draw()
-            j += 1
-    else:
-        for i in range(1, in_last):
-            canvases[canvas].cd[i]
-            hists_items[j].Draw()
-            j += 1
+c = 0
+j = 1
 
+for branch in tqdm(back_data.Histograms):
+    for leaf in back_data.Histograms[branch]:
+        if back_data.Histograms[branch][leaf] != None and sig_data.Histograms[branch][leaf] != None:
+            back_max = back_data.Histograms[branch][leaf].GetMaximum()
+            sig_max = sig_data.Histograms[branch][leaf].GetMaximum()
+            back_min = back_data.Histograms[branch][leaf].GetMinimum()
+            sig_min = sig_data.Histograms[branch][leaf].GetMinimum()
+            canvases["Canvas_{}".format(c)].cd(j)
+            back_data.Histograms[branch][leaf].Draw()
+            sig_data.Histograms[branch][leaf].SetLineColor(ROOT.kRed)
+            sig_data.Histograms[branch][leaf].Draw("SAME")
+            k_test = back_data.Histograms[branch][leaf].KolmogorovTest(sig_data.Histograms[branch][leaf])
+            if k_test == 0:
+                k_test = "Unknown"
+            text.DrawTextNDC(.5, .05, "Kolmogorov Test: {}".format(k_test))
+            j += 1
+            del k_test
+            if j == 10:
+                canvases["Canvas_{}".format(c)].Update()
+                c += 1
+                canvases["Canvas_{}".format(c)] = ROOT.TCanvas("Canvas_{}".format(c), "Canvas_{}".format(c))
+                canvases["Canvas_{}".format(c)].Divide(3,3)
+                canvases["Canvas_{}".format(c)].cd(0)
+                j = 1
+
+
+#gROOT.GetListOfCanvases().Draw()
 input("Enter to quit")

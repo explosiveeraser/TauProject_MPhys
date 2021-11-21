@@ -105,10 +105,39 @@ class Tower:
         self.BTVSumPT2 = v_obj.BTVSumPT2
 
 """
-
+"""
+Histogram Varaibles to Include
+{ "T","X","Y","Z","ErrorT", "ErrorX","ErrorY","ErrorZ", 
+  "Sigma", "SumPT2", "GenDeltaZ","BTVSumPT2","ET","Eta","Phi","E","T"
+    ,"NTimeHits", "Eem","Ehad","Charge","P","PT","Eta","Phi","CtgTheta"
+  , "C", "Mass", "EtaOuter","PhiOuter", "T","X","Y","Z","TOuter","XOuter",
+  "YOuter","ZOuter","Xd","Yd","Zd","L","D0","DZ","Nclusters","dNdx","ErrorP",
+  "ErrorPT","ErrorPhi","ErrorCtgTheta","ErrorT","ErrorD0","ErrorDZ","ErrorC",
+  "ErrorD0Phi","ErrorD0C","ErrorD0DZ","ErrorD0CtgTheta","ErrorPhiC","ErrorPhiDZ",
+  "ErrorPhiCtgTheta","ErrorCDZ","ErrorCCtgTheta","ErrorDZCt","PT",
+  "Eta","Phi","T","Mass","DeltaEta","DeltaPhi","Flavor","FlavorAlgo",
+  "FlavorPhys","BTag","BTagAlgo","BTagPhys","TauTag","TauWeight","Charge",
+  "EhadOverEem","NCharged","NNeutrals","NeutralEnergyFraction","ChargedEnergyFraction",
+  "Beta","BetaStar","MeanSqDeltaR","PTD"
+}
+"""
 
 class Dataset:
-    def __init__(self, directory, get_Histos=False):
+
+    fAllHists = { "T","X","Y","Z","ErrorT", "ErrorX","ErrorY","ErrorZ",
+  "Sigma", "SumPT2", "GenDeltaZ","BTVSumPT2","ET","Eta","Phi","E","T"
+    ,"NTimeHits", "Eem","Ehad","Charge","P","PT","Eta","Phi","CtgTheta"
+  , "C", "Mass", "EtaOuter","PhiOuter", "T","X","Y","Z","TOuter","XOuter",
+  "YOuter","ZOuter","Xd","Yd","Zd","L","D0","DZ","Nclusters","dNdx","ErrorP",
+  "ErrorPT","ErrorPhi","ErrorCtgTheta","ErrorT","ErrorD0","ErrorDZ","ErrorC",
+  "ErrorD0Phi","ErrorD0C","ErrorD0DZ","ErrorD0CtgTheta","ErrorPhiC","ErrorPhiDZ",
+  "ErrorPhiCtgTheta","ErrorCDZ","ErrorCCtgTheta","ErrorDZCt","PT",
+  "Eta","Phi","T","Mass","DeltaEta","DeltaPhi","Flavor","FlavorAlgo",
+  "FlavorPhys","BTag","BTagAlgo","BTagPhys","TauTag","TauWeight","Charge",
+  "EhadOverEem","NCharged","NNeutrals","NeutralEnergyFraction","ChargedEnergyFraction",
+  "Beta","BetaStar","MeanSqDeltaR","PTD"
+}
+    def __init__(self, directory, Histo_VarIncl = fAllHists):
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -121,20 +150,20 @@ class Dataset:
         for f in os.listdir(directory):
             self.chain.Add(directory + f)
         self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
-        self._leaves = dict((a, "") for a in map((lambda  a: a.GetFullName()), self.chain.GetListOfLeaves()))
+        self._leaves = dict((a, "") for a in map((lambda a: a.GetFullName()), self.chain.GetListOfLeaves()))
         for leaf in self._leaves.keys():
             temp = self.chain.FindLeaf(leaf.Data())
             self._leaves[leaf] = temp.GetTypeName()
         hist_incl = []
         for i in {"Track." , "Tower.", "EFlowTrack.", "GenJet.", "GenMissingET.", "Jet.", "MissingET.", "ScalarHT."}:
-            hist_incl.append(ROOT.TString(i))
+            for leaf in Histo_VarIncl:
+                hist_incl.append(ROOT.TString(i+leaf))
             self.Histograms[i[:-1]] = {}
         for leaf in tqdm(self._leaves.keys()):
-            for incl in hist_incl:
-                if leaf.Contains(incl) and (not leaf.Contains(ROOT.TString("fUniqueID")) and not leaf.Contains(ROOT.TString("fBits"))):
-                    if ("Float" in self._leaves[leaf] or "Int" in self._leaves[leaf]) and "_size" not in self._leaves[leaf]:
-                        leaf_obj = self.chain.FindLeaf(leaf.Data())
-                        self.Add_Histogram(leaf_obj)
+            if leaf in hist_incl:
+                if ("Float" in self._leaves[leaf] or "Int" in self._leaves[leaf]) or "Bool" in self._leaves[leaf]:
+                    leaf_obj = self.chain.FindLeaf(leaf.Data())
+                    self.Add_Histogram(leaf_obj)
         self._reader = ROOT.ExRootTreeReader(self.chain)
         self._nev = self._reader.GetEntries() - 49000
         self._branchReader = {}
@@ -163,13 +192,15 @@ class Dataset:
                 del length
             del w
             del evt
+        self.Normalize_Histograms()
 
 
     def Add_Histogram(self, object):
         [branch, leaf] = object.GetFullName().Data().split(".")
-        minimum = object.GetMinimum()
-        maximum = object.GetMaximum()
+        minimum = 0
+        maximum = 0
         self.Histograms[branch][leaf] = ROOT.TH1F(branch+"."+leaf, branch+"."+leaf, 128, minimum, maximum)
+        self.Histograms[branch][leaf].SetBit(ROOT.TH1.kXaxis)
 
     def Fill_Histograms(self, object):
         branch = object.ClassName()
@@ -183,4 +214,8 @@ class Dataset:
             pass
 
 
-
+    def Normalize_Histograms(self):
+        for branch in self.Histograms:
+            for leaf in self.Histograms[branch]:
+                if self.Histograms[branch][leaf] != None:
+                    self.Histograms[branch][leaf].Scale(1.)
