@@ -1,7 +1,9 @@
 import array
+import gc
 
 import numpy as np
 import ROOT
+import pandas as pd
 from ROOT import gROOT
 import numba
 from numba import jit, jit_module
@@ -153,7 +155,8 @@ class Dataset:
         self.DataSet = []
         self.Events = []
         self.Histograms = {}
-        self.Properties_Array = {}
+        self.Properties_Array = pd.DataFrame()
+        self._filler_dict = {}
         self._num_of_prop = {}
         self.chain = ROOT.TChain("Delphes")
         for f in os.listdir(directory):
@@ -168,7 +171,7 @@ class Dataset:
             for leaf in Histo_VarIncl:
                 hist_incl.append(ROOT.TString(i+leaf))
             self.Histograms[i[:-1]] = {}
-            self.Properties_Array[i[:-1]] = {}
+            self._filler_dict[i[:-1]] = {}
             self._num_of_prop[i[:-1]] = {}
         self._reader = ROOT.ExRootTreeReader(self.chain)
         for leaf in tqdm(self._leaves.keys()):
@@ -187,8 +190,10 @@ class Dataset:
         print("Reading in physics objects.")
 #        excluder = ["LHCOEvent", "LHEFEvent", "LHEFWeight", "HepMCEvent", "Photon", "Electron", "Muon"]
         includer = ["Event", "Weight", "Particle", "Track", "Tower", "EFlowTrack", "GenJet", "GenMissingET", "Jet", "MissingET", "ScalarHT"]
+        self.update_interval = 841
         for incl in includer:
             self.num_of_object[incl] = 0
+        df_update = False
         for entry in trange(self._nev, desc="Event Loop."):
             self._reader.ReadEntry(entry)
             w = self._branchReader["Weight"].At(0).Weight
@@ -202,12 +207,16 @@ class Dataset:
                     object = branch.At(idx)
                     self.Physics_ObjectArrays[branch_name].append(object)
                     if branch_name in list(self.Histograms.keys()):
-                        self.Fill_Histograms(branch_name, object)
+                        self.Fill_Histograms(branch_name, object, df_update, entry)
                     del object
                 del branch
                 del length
             del w
             del evt
+            df_update = False
+            if entry % self.update_interval == 0 or entry == 0:
+                print("DataFrame memory usage: {}".format(self.Properties_Array.memory_usage(index=False, deep=True)))
+                df_update = True
         self.Normalize_Histograms()
 
 
@@ -215,23 +224,34 @@ class Dataset:
         [branch, leaf] = object.GetFullName().Data().split(".")
         self.Histograms[branch][leaf] = ROOT.TH1F(branch+"."+leaf, branch+"."+leaf, 128, minimum, maximum)
         self.Histograms[branch][leaf].SetBit(ROOT.TH1.kXaxis)
-        self.Properties_Array[branch][leaf] = []
+        self._filler_dict[branch][leaf] = []
         self._num_of_prop[branch][leaf] = 0
 
-    def Fill_Histograms(self, branch, object):
+    def Fill_Histograms(self, branch, object, update_df, entry):
         if branch in self.Histograms.keys():
             for leaf in self.Histograms[branch]:
-                if self.Histograms[branch][leaf].GetEntries() == 0:
-                    maximum = getattr(object, leaf)
-                    minimum = getattr(object, leaf) - maximum*0.00005
-                    self.Histograms[branch][leaf].SetMaximum(maximum)
-                    self.Histograms[branch][leaf].SetMinimum(minimum)
-                try:
-                    self.Histograms[branch][leaf].Fill(getattr(object, leaf))
-                    self.Properties_Array[branch][leaf].append(getattr(object, leaf))
-                    self._num_of_prop[branch][leaf] += 1
-                except:
-                    self.Histograms[branch][leaf] = None
+                if self.Histograms[branch][leaf] != None:
+                    if self.Histograms[branch][leaf].GetEntries() == 0:
+                        maximum = getattr(object, leaf)
+                        minimum = getattr(object, leaf) - maximum*0.00005
+                        self.Histograms[branch][leaf].SetMaximum(maximum)
+                        self.Histograms[branch][leaf].SetMinimum(minimum)
+                    try:
+                        self.Histograms[branch][leaf].Fill(getattr(object, leaf))
+                        self._filler_dict[branch][leaf].append(float(getattr(object, leaf)))
+                        self._num_of_prop[branch][leaf] += 1
+                    except:
+                        self.Histograms[branch][leaf] = None
+                        print("{}.{}".format(branch, leaf))
+            if update_df:
+                temp = pd.DataFrame.from_dict(self._filler_dict[branch])
+                if entry == 1:
+                    self.Properties_Array = temp
+                else:
+                    self.Properties_Array[branch].append(temp[branch], ignore_index=True)
+                for leaf in self._filler_dict[branch].keys():
+                    self._filler_dict[branch][leaf] = []
+                    print("The size of {}.{} is : {}".format(branch, leaf, self.Properties_Array[branch][leaf].__len__()))
         else:
             pass
 
@@ -245,7 +265,7 @@ class Dataset:
                         self.Histograms[branch][leaf].Scale(1. / integral, "height")
 
     def get_sample_for_k_test(self, branch, leaf):
-        sample = self.Properties_Array[branch][leaf]
+        sample = self.Properties_Array[branch][leaf].to_numpy(dtype=float)
         sample_size = self._num_of_prop[branch][leaf]
         return sample_size, sample
 

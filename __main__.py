@@ -1,4 +1,5 @@
 import numpy as np
+import modin.pandas as pd
 from DataSet_Reader import Dataset
 import ROOT
 from ROOT import gROOT
