@@ -26,7 +26,7 @@ sig_data = Dataset(sig_dir)
 
 canvases = {}
 canvases["Canvas_0"] = ROOT.TCanvas("Canvas_0", "Canvas_0")
-canvases["Canvas_0"].Divide(3,3)
+canvases["Canvas_0"].Divide(4,4)
 canvases["Canvas_0"].cd(0)
 
 text = ROOT.TText(.5, .5, "Plots")
@@ -56,28 +56,29 @@ def k_test(sample_1Size, sample_1, sample_2Size, sample_2):
 
 for branch in tqdm(back_data.Histograms):
     for leaf in back_data.Histograms[branch]:
-        if back_data.Histograms[branch][leaf].Integral().__int__ != 0 and sig_data.Histograms[branch][leaf].Integral().__int__ != 0:
+        if True:
             canvases["Canvas_{}".format(c)].cd(j)
-            back_data.Histograms[branch][leaf].Draw("HIST L")
+            back_data.Histograms[branch][leaf].Draw("HIST")
+            canvases["Canvas_{}".format(c)].cd(j+1)
             sig_data.Histograms[branch][leaf].SetLineColor(ROOT.kRed)
-            sig_data.Histograms[branch][leaf].Draw("HIST SAME L")
-            sample_1Size, sample_1 = back_data.get_sample_for_k_test(branch, leaf)
-            sample_2Size, sample_2 = sig_data.get_sample_for_k_test(branch, leaf)
-            k_num = k_test(sample_1Size, sample_1, sample_2Size, sample_2)
-            k_num = np.round(k_num, 4)
-            text.DrawTextNDC(.0, .0, "Kolmogorov Test: {}".format(k_num))
-            legend["legend_{}_{}".format(c, j)] = ROOT.TLegend(0.05, 0.85, 0.2, 0.95)
-            legend["legend_{}_{}".format(c, j)].SetHeader("Histogram Colors:")
-            legend["legend_{}_{}".format(c, j)].AddEntry(back_data.Histograms[branch][leaf], "Background Data", "L")
-            legend["legend_{}_{}".format(c, j)].AddEntry(sig_data.Histograms[branch][leaf], "Signal Data", "L")
-            legend["legend_{}_{}".format(c, j)].Draw()
-            j += 1
-            del k_num
-            if j == 10:
+            sig_data.Histograms[branch][leaf].Draw("HIST")
+            #sample_1Size, sample_1 = back_data.get_sample_for_k_test(branch, leaf)
+            #sample_2Size, sample_2 = sig_data.get_sample_for_k_test(branch, leaf)
+            #k_num = k_test(sample_1Size, sample_1, sample_2Size, sample_2)
+            #k_num = np.round(k_num, 4)
+            #text.DrawTextNDC(.0, .0, "Kolmogorov Test: {}".format(k_num))
+            #legend["legend_{}_{}".format(c, j)] = ROOT.TLegend(0.05, 0.85, 0.2, 0.95)
+            #legend["legend_{}_{}".format(c, j)].SetHeader("Histogram Colors:")
+            #legend["legend_{}_{}".format(c, j)].AddEntry(back_data.Histograms[branch][leaf], "Background Data", "L")
+            #legend["legend_{}_{}".format(c, j)].AddEntry(sig_data.Histograms[branch][leaf], "Signal Data", "L")
+            #legend["legend_{}_{}".format(c, j)].Draw()
+            j += 2
+            #del k_num
+            if j > 17:
                 canvases["Canvas_{}".format(c)].Update()
                 c += 1
                 canvases["Canvas_{}".format(c)] = ROOT.TCanvas("Canvas_{}".format(c), "Canvas_{}".format(c))
-                canvases["Canvas_{}".format(c)].Divide(3,3)
+                canvases["Canvas_{}".format(c)].Divide(4,4)
                 canvases["Canvas_{}".format(c)].cd(0)
                 j = 1
 
