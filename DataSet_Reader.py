@@ -47,7 +47,7 @@ class Dataset:
                 dtype = self._HistConfig[branch][leaf][1]
                 NxBins = self._HistConfig[branch][leaf][2]
                 self.Add_Histogram(branch, leaf, minimum, maximum, dtype=dtype, NxBins=NxBins)
-        self._nev = self._reader.GetEntries() - 49000
+        self._nev = self._reader.GetEntries()
         self._branchReader = {}
         self.Physics_ObjectArrays = {}
         self.num_of_object = {}

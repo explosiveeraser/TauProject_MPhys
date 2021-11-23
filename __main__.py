@@ -49,7 +49,7 @@ for branch in tqdm(back_data.Histograms):
         sig_data.Histograms[branch][leaf].SetLineColor(ROOT.kRed)
         sig_data.Histograms[branch][leaf].Draw("HIST SAMES0")
         if back_data.Histograms[branch][leaf].Integral() == 0 or sig_data.Histograms[branch][leaf].Integral() == 0:
-            chi_test = back_data.Histograms[branch][leaf].Chi2Test(sig_data.Histograms[branch][leaf])
+            chi_test = back_data.Histograms[branch][leaf].Chi2Test(sig_data.Histograms[branch][leaf], option="WW NORM")
             text.DrawTextNDC(.0, .0, "Chi2Test: {}".format(chi_test))
         else:
             k_test = back_data.Histograms[branch][leaf].KolmogorovTest(sig_data.Histograms[branch][leaf])
