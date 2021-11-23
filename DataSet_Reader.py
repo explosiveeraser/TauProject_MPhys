@@ -12,46 +12,10 @@ from tqdm import tqdm, trange
 
 ROOT.gSystem.Load("install/lib/libDelphes")
 
-"""
-Histogram Varaibles to Include including PU variables
-{ "T","X","Y","Z","ErrorT", "ErrorX","ErrorY","ErrorZ", 
-  "Sigma", "SumPT2", "GenDeltaZ","BTVSumPT2","ET","Eta","Phi","E","T"
-    ,"NTimeHits", "Eem","Ehad","Charge","P","PT","Eta","Phi","CtgTheta"
-  , "C", "Mass", "EtaOuter","PhiOuter", "T","X","Y","Z","TOuter","XOuter",
-  "YOuter","ZOuter","Xd","Yd","Zd","L","D0","DZ","Nclusters","dNdx","ErrorP",
-  "ErrorPT","ErrorPhi","ErrorCtgTheta","ErrorT","ErrorD0","ErrorDZ","ErrorC",
-  "ErrorD0Phi","ErrorD0C","ErrorD0DZ","ErrorD0CtgTheta","ErrorPhiC","ErrorPhiDZ",
-  "ErrorPhiCtgTheta","ErrorCDZ","ErrorCCtgTheta","ErrorDZCt","PT",
-  "Eta","Phi","T","Mass","DeltaEta","DeltaPhi","Flavor","FlavorAlgo",
-  "FlavorPhys","BTag","BTagAlgo","BTagPhys","TauTag","TauWeight","Charge",
-  "EhadOverEem","NCharged","NNeutrals","NeutralEnergyFraction","ChargedEnergyFraction",
-  "Beta","BetaStar","MeanSqDeltaR","PTD"
-}
-
-excluding PU and empties and errors
-{
-"T","X","Y","Z", "Sigma", "SumPT2", "GenDeltaZ","BTVSumPT2","ET","Eta","Phi","E","T"
-    ,"NTimeHits", "Eem","Ehad","Charge","P","PT","Eta","Phi","CtgTheta"
-  , "C", "Mass", "EtaOuter","PhiOuter", "T","X","Y","Z","TOuter","XOuter",
-  "YOuter","ZOuter","Xd","Yd","Zd","L","D0","DZ","Nclusters","dNdx","PT",
-  "Eta","Phi","T","Mass","DeltaEta","DeltaPhi","TauTag","TauWeight","Charge",
-  "EhadOverEem","NCharged","NNeutrals","NeutralEnergyFraction","ChargedEnergyFraction",
-  "MeanSqDeltaR","PTD"
-}
-"""
 
 class Dataset:
 
-    fAllHists = {
-"T","X","Y","Z", "Sigma", "SumPT2", "GenDeltaZ","BTVSumPT2","ET","Eta","Phi","E","T"
-    ,"NTimeHits", "Eem","Ehad","Charge","P","PT","Eta","Phi","CtgTheta"
-  , "C", "Mass", "EtaOuter","PhiOuter", "T","X","Y","Z","TOuter","XOuter",
-  "YOuter","ZOuter","Xd","Yd","Zd","L","D0","DZ","Nclusters","dNdx","PT",
-  "Eta","Phi","T","Mass","DeltaEta","DeltaPhi","TauTag","TauWeight","Charge",
-  "EhadOverEem","NCharged","NNeutrals","NeutralEnergyFraction","ChargedEnergyFraction",
-  "MeanSqDeltaR","PTD"
-}
-    def __init__(self, directory, Histo_VarIncl = fAllHists):
+    def __init__(self, directory, conf_fname="Hist_Config"):
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -60,51 +24,46 @@ class Dataset:
         self.DataSet = []
         self.Events = []
         self.Histograms = {}
-        self.Properties_Array = pd.DataFrame()
-        self._filler_dict = {}
-        self._num_of_prop = {}
         self.chain = ROOT.TChain("Delphes")
         for f in os.listdir(directory):
             self.chain.Add(directory + f)
+        self._Object_Includer = ["Event", "Weight", "Particle", "GenMissingET", "MissingET", "ScalarHT", "GenJet",
+                                 "Jet", "EFlowTrack", "Track", "Tower"]
+        self._reader = ROOT.ExRootTreeReader(self.chain)
         self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
+        for branch in self._branches:
+            if branch not in self._Object_Includer:
+                self.chain.SetBranchStatus(branch, status=0)
         self._leaves = dict((a, "") for a in map((lambda a: a.GetFullName()), self.chain.GetListOfLeaves()))
         for leaf in self._leaves.keys():
             temp = self.chain.FindLeaf(leaf.Data())
             self._leaves[leaf] = temp.GetTypeName()
-        hist_incl = []
-        for i in {"Track." , "Tower.", "EFlowTrack.", "GenJet.", "GenMissingET.", "Jet.", "MissingET.", "ScalarHT."}:
-            for leaf in Histo_VarIncl:
-                hist_incl.append(ROOT.TString(i+leaf))
-            self.Histograms[i[:-1]] = {}
-            self._filler_dict[i[:-1]] = {}
-            self._num_of_prop[i[:-1]] = {}
-        self._reader = ROOT.ExRootTreeReader(self.chain)
-        for leaf in tqdm(self._leaves.keys()):
-            if leaf in hist_incl:
-                if ("Float" in self._leaves[leaf] or "Int" in self._leaves[leaf]) or "Bool" in self._leaves[leaf]:
-                    name = leaf.Data().split(".")
-                    leaf_obj = self.chain.FindLeaf(leaf.Data())
-                    self.Add_Histogram(leaf_obj)
-        self._nev = self._reader.GetEntries()
+        self._Read_Hist_Config(conf_fname)
+        for branch in self._HistConfig.keys():
+            self.Histograms[branch] = {}
+            for leaf in self._HistConfig[branch].keys():
+                minimum = self._HistConfig[branch][leaf][0][0]
+                maximum = self._HistConfig[branch][leaf][0][1]
+                dtype = self._HistConfig[branch][leaf][1]
+                NxBins = self._HistConfig[branch][leaf][2]
+                self.Add_Histogram(branch, leaf, minimum, maximum, dtype=dtype, NxBins=NxBins)
+        self._nev = self._reader.GetEntries() - 49000
         self._branchReader = {}
         self.Physics_ObjectArrays = {}
         self.num_of_object = {}
         for branch in self._branches:
-            self._branchReader[branch] = self._reader.UseBranch(branch)
-            self.Physics_ObjectArrays[branch] = []
+            if branch in self._Object_Includer:
+                self._branchReader[branch] = self._reader.UseBranch(branch)
+                self.Physics_ObjectArrays[branch] = []
+                self.num_of_object[branch] = 0
         print("Reading in physics objects.")
-#        excluder = ["LHCOEvent", "LHEFEvent", "LHEFWeight", "HepMCEvent", "Photon", "Electron", "Muon"]
-        includer = ["Event", "Weight", "Particle", "Track", "Tower", "EFlowTrack", "GenJet", "GenMissingET", "Jet", "MissingET", "ScalarHT"]
         self.update_interval = 841
-        for incl in includer:
-            self.num_of_object[incl] = 0
-        df_update = False
         for entry in trange(self._nev, desc="Event Loop."):
             self._reader.ReadEntry(entry)
             w = self._branchReader["Weight"].At(0).Weight
             evt = self._branchReader["Event"].At(0)
             self.Events.append([entry, evt, w])
-            for branch_name in includer:
+            for branch_name in self._Object_Includer:
                 branch = self._branchReader[branch_name]
                 length = branch.GetEntries()
                 self.num_of_object[branch_name] += length
@@ -112,7 +71,7 @@ class Dataset:
                     object = branch.At(idx)
                     self.Physics_ObjectArrays[branch_name].append(object)
                     if branch_name in list(self.Histograms.keys()):
-                        self.Fill_Histograms(branch_name, object, df_update, entry)
+                        self.Fill_Histograms(branch_name, object, w)
                     del object
                 del branch
                 del length
@@ -120,29 +79,44 @@ class Dataset:
             del evt
         self.Normalize_Histograms()
 
+    def _Read_Hist_Config(self, fname):
+        self._HistConfig = {}
+        with open(fname) as file:
+            for line in file:
+                if line.__contains__("#"):
+                    pass
+                else:
+                    [branch, rest] = line.split(".", 1)
+                    [leaf, rest] = rest.split(":", 1)
+                    [minimum, rest] = rest.split(",", 1)
+                    [maximum, rest] = rest.split(";", 1)
+                    [dtype, NxBins] = rest.split(";", 1)
+                    NxBins = NxBins.split("\n")[0]
+                    if self._HistConfig.__contains__(branch):
+                        self._HistConfig[branch][leaf] = [(float(minimum), float(maximum)), str(dtype), int(NxBins)]
+                    else:
+                        self._HistConfig[branch] = {}
 
-    def Add_Histogram(self, object, maximum=0, minimum=0):
-        [branch, leaf] = object.GetFullName().Data().split(".")
-        self.Histograms[branch][leaf] = ROOT.TH1F(branch+"."+leaf, branch+"."+leaf, 128, minimum, maximum)
-        self.Histograms[branch][leaf].SetBit(ROOT.TH1.kXaxis)
-        self._filler_dict[branch][leaf] = []
-        self._num_of_prop[branch][leaf] = 0
+    def Add_Histogram(self, branch, leaf, minimum, maximum, dtype="F", NxBins=128):
+        if maximum != minimum:
+            if "F" in dtype:
+                self.Histograms[branch][leaf] = ROOT.TH1F(branch+"."+leaf, branch+"."+leaf, NxBins, minimum, maximum)
+            elif "D" in dtype:
+                self.Histograms[branch][leaf] = ROOT.TH1D(branch + "." + leaf, branch + "." + leaf, NxBins, minimum, maximum)
+            elif "I" in dtype:
+                self.Histograms[branch][leaf] = ROOT.TH1D(branch + "." + leaf, branch + "." + leaf, NxBins, int(minimum), int(maximum))
+            elif "B" in dtype:
+                self.Histograms[branch][leaf] = ROOT.TH1I(branch + "." + leaf, branch + "." + leaf, NxBins, int(minimum), int(maximum))
 
-    def Fill_Histograms(self, branch, object, update_df, entry):
+    def Fill_Histograms(self, branch, object, weight):
         if branch in self.Histograms.keys():
             for leaf in self.Histograms[branch]:
                 if self.Histograms[branch][leaf] != None:
-                    if self.Histograms[branch][leaf].GetEntries() == 0:
-                        maximum = getattr(object, leaf)
-                        minimum = getattr(object, leaf) - maximum*0.00005
-                        self.Histograms[branch][leaf].SetMaximum(maximum)
-                        self.Histograms[branch][leaf].SetMinimum(minimum)
-                    try:
-                        self.Histograms[branch][leaf].Fill(getattr(object, leaf))
-                        self._num_of_prop[branch][leaf] += 1
-                    except:
-                        self.Histograms[branch][leaf] = None
-                        print("{}.{}".format(branch, leaf))
+                    dtype = self._HistConfig[branch][leaf][1]
+                    if "I" in dtype or "B" in dtype:
+                        self.Histograms[branch][leaf].Fill(numba.types.int32(getattr(object, leaf)), weight)
+                    else:
+                        self.Histograms[branch][leaf].Fill(getattr(object, leaf), weight)
         else:
             pass
 
