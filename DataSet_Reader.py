@@ -72,6 +72,9 @@ class Dataset:
                     self.Physics_ObjectArrays[branch_name].append(object)
                     if branch_name in list(self.Histograms.keys()):
                         self.Fill_Histograms(branch_name, object, w)
+                    if object.ClassName() == "Jet":
+                        for const in object.Constituents.GetEntries():
+                            print("Jet {}.{} contains: {}".format(entry, idx, const.ClassName()))
                     del object
                 del branch
                 del length
