@@ -18,10 +18,12 @@ ROOT.ROOT.EnableImplicitMT()
 ROOT.gStyle.SetOptStat("ne")
 
 back_dir = "Delphes_Background/"
-sig_dir = "Delphes_Signal/"
+sig_dir = "Delphes_Signal_wPU/"
 
-back_data = Dataset(back_dir)
+
 sig_data = Dataset(sig_dir)
+back_data = Dataset(back_dir)
+
 
 canvases = {}
 canvases["Canvas_0"] = ROOT.TCanvas("Canvas_0", "Canvas_0")

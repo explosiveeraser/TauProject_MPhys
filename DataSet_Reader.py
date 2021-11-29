@@ -28,7 +28,7 @@ class Dataset:
         for f in os.listdir(directory):
             self.chain.Add(directory + f)
         self._Object_Includer = ["Event", "Weight", "Particle", "GenMissingET", "MissingET", "ScalarHT", "GenJet",
-                                 "Jet", "EFlowTrack", "Track", "Tower"]
+                                 "Jet", "EFlowTrack","EFlowNeutralHadron", "EFlowPhoton", "Tower", "Track"]
         self._reader = ROOT.ExRootTreeReader(self.chain)
         self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
         for branch in self._branches:
@@ -57,29 +57,81 @@ class Dataset:
                 self.Physics_ObjectArrays[branch] = []
                 self.num_of_object[branch] = 0
         print("Reading in physics objects.")
-        self.update_interval = 841
+        Jet_File_Name = self.name + "_Jet_Const.txt"
+        Jet_File_Name2 = self.name + "_Jet_Particles.txt"
+        try:
+            os.remove(Jet_File_Name)
+        except:
+            pass
+        try:
+            os.remove(Jet_File_Name2)
+        except:
+            pass
+        Jet_file = open(Jet_File_Name, "a")
+        Jet_file2 = open(Jet_File_Name2, "a")
         for entry in trange(self._nev, desc="Event Loop."):
             self._reader.ReadEntry(entry)
             w = self._branchReader["Weight"].At(0).Weight
             evt = self._branchReader["Event"].At(0)
             self.Events.append([entry, evt, w])
             for branch_name in self._Object_Includer:
-                branch = self._branchReader[branch_name]
-                length = branch.GetEntries()
-                self.num_of_object[branch_name] += length
-                for idx in range(0, length):
-                    object = branch.At(idx)
-                    self.Physics_ObjectArrays[branch_name].append(object)
-                    if branch_name in list(self.Histograms.keys()):
-                        self.Fill_Histograms(branch_name, object, w)
-                    if object.ClassName() == "Jet":
-                        for const in object.Constituents.GetEntries():
-                            print("Jet {}.{} contains: {}".format(entry, idx, const.ClassName()))
-                    del object
-                del branch
-                del length
-            del w
-            del evt
+                if "Jet" in branch_name:
+                    branch = self._branchReader[branch_name]
+                    length = branch.GetEntries()
+                    self.num_of_object[branch_name] += length
+                    for idx in range(0, length):
+                        object = branch.At(idx)
+                        particles = object.Particles
+                        const = object.Constituents
+                        contains_tau = False
+                        Jet_file2.write("{} {}.{} Contains: ".format(branch_name,entry, idx))
+                        Jet_file.write("{} {}.{} Contains: ".format(branch_name,entry, idx))
+                        first = True
+                        for p in range(0, particles.GetEntries()):
+                            p_obj = particles.At(p)
+                            try:
+                                Jet_file2.write(str(p_obj.PID) + ", ")
+                                for c in range(0, const.GetEntries()):
+                                    c_obj = const.At(c)
+                                    if first == True:
+                                        Jet_file.write(c_obj.GetName() + ", ")
+                                    try:
+                                        c_part = c_obj.Particles()
+                                    except:
+                                        c_part = 0
+                                    if c_part != 0:
+                                        for c_p in range(0, c_part.GetEntries()):
+                                            cp_obj = c_part.At(c_p)
+                                            if p_obj.PID == 15 or p_obj == -15 or cp_obj == 15 or cp_obj == -15:
+                                                contains_tau = True
+                                    else:
+                                        if p_obj.PID == 15 or p_obj == -15:
+                                            contains_tau = True
+                                if first == True:
+                                    first = False
+                            except:
+                                pass
+                        Jet_file.write("\n")
+                        Jet_file2.write("\n")
+                        if contains_tau == True:
+                            #Jet_file2.write("Jet {}.{} Contains: ".format(entry, idx))
+                            #Jet_file.write("Jet {}.{} Contains: ".format(entry, idx))
+                            #for ldx in range(0, particles.GetEntries()):
+                             #   particle = particles.At(ldx)
+                              #  Jet_file2.write(str(particle.PID)+ ", ")
+                            #Jet_file2.write("\n")
+                            self.Fill_Histograms(branch_name, object, w)
+                            #self.Physics_ObjectArrays[branch_name].append(object)
+                            const = object.Constituents
+                            for jdx in range(0, const.GetEntries()):
+                                const_obj = const.At(jdx)
+                                cls_name = const_obj.ClassName()
+                             #   Jet_file.write(cls_name + ", ")
+                                if cls_name in list(self.Histograms.keys()):
+                                    self.Fill_Histograms(cls_name, const_obj, w)
+                            #Jet_file.write("\n")
+        Jet_file.close()
+        Jet_file2.close()
         self.Normalize_Histograms()
 
     def _Read_Hist_Config(self, fname):
