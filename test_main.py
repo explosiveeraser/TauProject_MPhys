@@ -115,10 +115,10 @@ for canvas in canvases.keys():
     canvases[canvas].Print("Canvas_{}.pdf".format(i))
     i+=1
 
-#back_data.print_test_arrays(back_data.JetTestArray)
-#back_data.print_test_arrays(back_data.TJetTestArray)
-#sig_data.print_test_arrays(sig_data.JetTestArray)
-#sig_data.print_test_arrays(sig_data.TJetTestArray)
+back_data.print_test_arrays(back_data.JetTestArray)
+back_data.print_test_arrays(back_data.TJetTestArray)
+sig_data.print_test_arrays(sig_data.JetTestArray)
+sig_data.print_test_arrays(sig_data.TJetTestArray)
 
 input("Enter to quit")
 

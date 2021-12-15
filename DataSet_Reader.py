@@ -40,7 +40,7 @@ class Dataset:
             self._leaves[leaf] = temp.GetTypeName()
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
-        self._nev = self._reader.GetEntries()
+        self._nev = self._reader.GetEntries() -49000
         self._branchReader = {}
         self.TauJet_Container = []
         self.JetTestArray = []
