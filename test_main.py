@@ -1,6 +1,8 @@
 import numpy as np
 import modin.pandas as pd
 from DataSet_Reader import Dataset
+from Background_DataReader import Background
+from Signal_DataReader import Signal
 import ROOT
 from ROOT import gROOT
 import numba
@@ -14,14 +16,22 @@ delphes install library directory
 """
 ROOT.gSystem.Load("install/lib/libDelphes")
 
+try:
+    ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
+    ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
+except:
+    pass
+
+
 ROOT.ROOT.EnableImplicitMT()
 ROOT.gStyle.SetOptStat("ne")
 
 back_dir = "Delphes_Background/"
 sig_dir = "Delphes_Signal/"
 
-sig_data = Dataset(sig_dir)
-back_data = Dataset(back_dir)
+back_data = Background(back_dir)
+sig_data = Signal(sig_dir)
+
 
 
 canvases = {}
@@ -115,10 +125,12 @@ for canvas in canvases.keys():
     canvases[canvas].Print("Canvas_{}.pdf".format(i))
     i+=1
 
-back_data.print_test_arrays(back_data.JetTestArray)
-back_data.print_test_arrays(back_data.TJetTestArray)
-sig_data.print_test_arrays(sig_data.JetTestArray)
+
 sig_data.print_test_arrays(sig_data.TJetTestArray)
+#back_data.print_test_arrays(back_data.JetTestArray)
+back_data.print_test_arrays(back_data.TJetTestArray)
+#sig_data.print_test_arrays(sig_data.JetTestArray)
+
 
 input("Enter to quit")
 
