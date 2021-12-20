@@ -46,7 +46,7 @@ class Signal(Dataset):
             self._leaves[leaf] = temp.GetTypeName()
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
-        self._nev = self._reader.GetEntries()
+        self._nev = self._reader.GetEntries()-49000
         for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
             self._branchReader[branch] = self._reader.UseBranch(branch)
             self.num_of_object[branch] = 0
