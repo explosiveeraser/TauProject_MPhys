@@ -16,133 +16,6 @@ ROOT.gSystem.Load("install/lib/libDelphes")
 
 class Dataset:
 
-    def __init__(self, directory, conf_fname="Hist_Config"):
-        if "/" in directory:
-            self.name = directory[:-1]
-        else:
-            self.name = directory
-            directory = directory + "/"
-        self.initialise_parameters()
-        self.chain = ROOT.TChain("Delphes")
-        for f in os.listdir(directory):
-            self.chain.Add(directory + f)
-        self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"]
-        self._reader = ROOT.ExRootTreeReader(self.chain)
-        self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
-        for branch in self._branches:
-            if branch not in self._Object_Includer:
-                self.chain.SetBranchStatus(branch, status=0)
-        self.chain.SetBranchStatus("Tower", status=0)
-        self._leaves = dict((a, "") for a in map((lambda a: a.GetFullName()), self.chain.GetListOfLeaves()))
-        for leaf in self._leaves.keys():
-            temp = self.chain.FindLeaf(leaf.Data())
-            self._leaves[leaf] = temp.GetTypeName()
-        self._Read_Hist_Config(conf_fname)
-        self.Book_Histograms()
-        self._nev = self._reader.GetEntries()
-        for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track"}:
-            self._branchReader[branch] = self._reader.UseBranch(branch)
-            self.num_of_object[branch] = 0
-        self.num_of_object["Tower"] = 0
-        print("Reading in physics objects.")
-        for entry in trange(self._nev, desc="Signal Jet (wTrack) Event Loop."):
-            self._reader.ReadEntry(entry)
-            weight = self._branchReader["Weight"].At(0).Weight
-            evt = self._branchReader["Event"].At(0)
-            num_Jets = self._branchReader["Jet"].GetEntriesFast()
-            self.Tau_Tagger.append([])
-            for idx in range(0, num_Jets):
-                self.Tau_Tagger[entry].append([])
-                jet = self._branchReader["Jet"].At(idx)
-                self.num_of_object["Jet"] += 1
-                jet_part = jet.Particles
-                jet_const = jet.Constituents
-                tau_jet = self.Contains_Tau(jet_part)
-                for i in range(0, jet_const.GetEntries()):
-                    const = jet_const.At(i)
-                    tracks = []
-                    if not jet_const.IsArgNull(str(i), const):
-                        if const.ClassName() == "GenParticle":
-                            if const.PID == 15 or const.PID == -15:
-                                tau_jet = True
-                                self.num_tau_jets += 1
-                        if const.ClassName() == "Track":
-                            track_part = const.Particle.GetObject()
-                            self.num_of_object["Track"] += 1
-                            if track_part.PID == 15 or track_part.PID == -15:
-                                tau_jet = True
-                                self.num_tau_jets += 1
-                            tracks.append(const)
-                            if tau_jet == True:
-                                self.Fill_Tau_Histograms("Track", const, weight)
-                            elif tau_jet == False:
-                                self.Fill_Histograms("Track", const, weight)
-                if tau_jet == True:
-                    self.TauJet_Container.append([(entry, idx) ,evt, weight, jet, {"Tracks" : tracks, "Towers" : []}])
-                    self.TJetTestArray.append([(entry, idx), evt, weight, {"Jet" : {
-                        "PT" : jet.PT,
-                        "DR" : math.sqrt(jet.DeltaEta**2+jet.DeltaPhi**2),
-                        "Eta" : jet.Eta,
-                        "Phi" : jet.Phi
-                    }, "Tracks" : [], "Towers" : []}])
-                    for track in tracks:
-                        self.TJetTestArray[len(self.TJetTestArray)-1][3]["Tracks"].append({"PT" : track.PT, "DR" : math.sqrt((track.Eta-jet.Eta)**2+(track.Phi-jet.Phi)**2)})
-                    self.num_tau_jets += 1
-                    print("Found Tau Jet!")
-                    self.Fill_Tau_Histograms("Jet", jet, weight)
-                    self.Tau_Tagger[entry][idx] = True
-                elif tau_jet == False:
-                    self.Fill_Histograms("Jet", jet, weight)
-                    self.JetTestArray.append([(entry, idx), evt, weight, {"Jet": {
-                        "PT": jet.PT,
-                        "DR": math.sqrt(jet.DeltaEta ** 2 + jet.DeltaPhi ** 2),
-                        "Eta": jet.Eta,
-                        "Phi": jet.Phi
-                    }, "Tracks": [], "Towers": []}])
-                    for track in tracks:
-                        self.JetTestArray[len(self.JetTestArray)-1][3]["Tracks"].append({"PT" : track.PT, "DR" : math.sqrt((track.Eta-jet.Eta)**2+(track.Phi-jet.Phi)**2)})
-                    self.num_nontau_jets += 1
-                    self.Tau_Tagger[entry][idx] = False
-            for branch in {"GenMissingET", "MissingET", "ScalarET"}:
-                if branch in list(self.Histograms.keys()):
-                    num = self._branchReader[branch].GetEntriesFast()
-                    for idx in range(0, num):
-                        obj = self._branchReader[branch].At(idx)
-                        self.Fill_Histograms(branch, obj, weight)
-        self.chain.SetBranchStatus("Tower", status=1)
-        self._branchReader["Tower"] = self._reader.UseBranch("Tower")
-        print("Reading Towers")
-        processed_tjet = 0
-        processed_njet = 0
-        for entry in trange(self._nev, desc="Tower Event Loop."):
-            self._reader.ReadEntry(entry)
-            weight = self._branchReader["Weight"].At(0).Weight
-            evt = self._branchReader["Event"].At(0)
-            num_Jets = self._branchReader["Jet"].GetEntriesFast()
-            for idx in range(0, num_Jets):
-                jet = self._branchReader["Jet"].At(idx)
-                tau_jet = False
-                self.num_of_object["Jet"] += 1
-                jet_const = jet.Constituents
-                if self.Tau_Tagger[entry][idx] == True:
-                    tau_jet = True
-                    processed_tjet += 1
-                    processed_njet += 1
-                if not jet_const.IsEmpty():
-                    num_tracks = jet_const.GetEntries()
-                    for jdx in range(0, num_tracks):
-                        tower_obj = jet_const.At(jdx)
-                        if not jet_const.IsArgNull(str(jdx), tower_obj):
-                            if tower_obj.ClassName() == "Tower":
-                                self.num_of_object["Tower"] += 1
-                                if tau_jet == True:
-                                    self.Fill_Tau_Histograms("Tower", tower_obj, weight)
-                                    self.TJetTestArray[processed_tjet-1][3]["Towers"].append({"ET" : tower_obj.ET, "DR" : math.sqrt((tower_obj.Eta-jet.Eta)**2+(tower_obj.Phi-jet.Phi)**2)})
-                                elif tau_jet == False:
-                                    self.Fill_Histograms("Tower", tower_obj, weight)
-                                    self.JetTestArray[processed_njet-1][3]["Towers"].append({"ET" : tower_obj.ET, "DR" : math.sqrt((tower_obj.Eta-jet.Eta)**2+(tower_obj.Phi-jet.Phi)**2)})
-        self.Normalize_Histograms()
-
     def initialise_parameters(self):
         self.Histograms = {}
         self.Tau_Histograms = {}
@@ -161,16 +34,16 @@ class Dataset:
         num_taus = 0
         for i in range(0, len(array), 25):
             jet = array[i]
-            if jet[3]["Jet"]["Tau_Check"]:
+            if True:
                 num_taus += 1
             print("Jet Number {}-------------------".format(i))
-            print("Entry : {} | IDX : {} | Weight : {} | Jet.PT : {} | Jet.DeltaR : {}".format(jet[0][0], jet[0][1], jet[2], jet[3]["Jet"]["PT"], jet[3]["Jet"]["DR"]))
-            print("ETA: {} | PHI: {} | Truth_Tau: {} | Flavor: {}".format(jet[3]["Jet"]["Eta"], jet[3]["Jet"]["Phi"], jet[3]["Jet"]["Tau_Check"], jet[3]["Jet"]["Jet_Obj"].Flavor))
-            for track in jet[3]["Tracks"]:
-                DR = math.sqrt(track.Eta ** 2 + track.Phi ** 2)
+            print("Entry : {} | IDX : {} | Weight : {} | Jet.PT : {} | Jet.DeltaR : {}".format(jet.entry, jet.idx, jet.weight, jet.PT, jet.DR))
+            print("ETA: {} | PHI: {} | Truth_Tau: {} | Flavor: {}".format(jet.Eta, jet.Phi, jet.TruthTau, jet.jet_obj.Flavor))
+            for track in jet.Tracks:
+                DR = math.sqrt((jet.Eta - track.Eta) ** 2 + (jet.Phi - track.Phi) ** 2)
                 print("Track PT : {} | Track DeltaR : {}".format(track.PT, DR))
-            for tower in jet[3]["Towers"]:
-                DR = math.sqrt(tower.Eta ** 2 + tower.Phi ** 2)
+            for tower in jet.Towers:
+                DR = math.sqrt((jet.Eta - tower.Eta) ** 2 + (jet.Phi - tower.Phi) ** 2)
                 print("Tower ET : {} | Tower DeltaR : {}".format(tower.ET, DR))
             print("End of Jet--------------")
         print("The total number of taus found are: {}".format(num_taus))
