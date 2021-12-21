@@ -28,11 +28,11 @@ class Jet_():
         self.Phi = jet_obj.Phi
         self.DR = math.sqrt((jet_obj.DeltaEta) **2 + (jet_obj.DeltaPhi) **2)
         self.MeanSqDR = jet_obj.MeanSqDeltaR
-        self.TruthTau = False
         self.TauCan_1Prong = False
         self.TauCan_3Prong = False
         self.particles = particles
         self.TruthTau = self._Contains_Tau(self.particles)
+        self.TruthTau = jet_obj.TauTag
         self.constituents = constituents
         self.Tracks = []
         self.Towers = []
@@ -48,6 +48,7 @@ class Jet_():
                 track = evt_tracks[idx]
                 self.Tracks.append(track)
 
+
     def _Add_Towers(self):
         num_const = len(self.constituents)
         for idx in range(0, num_const):
@@ -62,5 +63,6 @@ class Jet_():
         for i in range(0, num1):
             test = particles.At(i).PID
             if test == 15 or test == -15:
+                print("True")
                 found_tau = True
         return found_tau

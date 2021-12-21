@@ -49,14 +49,14 @@ class Signal(Dataset):
             self._leaves[leaf] = temp.GetTypeName()
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
-        self._nev = self._reader.GetEntries()-49000
+        self._nev = self._reader.GetEntries()
         for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
             self._branchReader[branch] = self._reader.UseBranch(branch)
             self.num_of_object[branch] = 0
         self.num_of_object["Tower"] = 0
         self.JetArray = []
         print("Reading in physics objects.")
-        for entry in trange(self._nev, desc="Background Jet (wTrack) Event Loop."):
+        for entry in trange(self._nev, desc="Signal Jet (wTrack) Event Loop."):
             self._reader.ReadEntry(entry)
             weight = self._branchReader["Weight"].At(0).Weight
             evt = self._branchReader["Event"].At(0)
@@ -72,17 +72,24 @@ class Signal(Dataset):
                 tracks.append(evt_track)
                 if evt_track.TruthTau:
                     track_taus.append(evt_track)
-                self.Fill_Histograms("Track", self._branchReader["Track"].At(jdx), weight)
             for kdx in range(0, num_towers):
                 tower = self._branchReader["Tower"].At(kdx)
-                self.Fill_Histograms("Tower", tower, weight)
             for idx in range(0, num_Jets):
                 jet = self._branchReader["Jet"].At(idx)
                 self.num_of_object["Jet"] += 1
-                if True:
-                    new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, tracks, jet.Constituents)
-                    self.JetArray.append(new_jet)
+                new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, tracks, jet.Constituents)
+                self.JetArray.append(new_jet)
+                self.Fill_Histograms("Jet", jet, weight)
+                if new_jet.TruthTau:
                     self.Fill_Tau_Histograms("Jet", jet, weight)
+                for Track in new_jet.Tracks:
+                    self.Fill_Histograms("Track", Track.track_obj, weight)
+                    if new_jet.TruthTau:
+                        self.Fill_Tau_Histograms("Track", Track.track_obj, weight)
+                for Tower in new_jet.Towers:
+                    self.Fill_Histograms("Tower", Tower.tower_obj, weight)
+                    if new_jet.TruthTau:
+                        self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight)
             for branch in {"GenMissingET", "MissingET", "ScalarET"}:
                 if branch in list(self.Histograms.keys()):
                     num = self._branchReader[branch].GetEntries()
