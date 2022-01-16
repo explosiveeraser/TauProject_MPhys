@@ -1,5 +1,5 @@
 import numpy as np
-import modin.pandas as pd
+#import modin.pandas as pd
 from DataSet_Reader import Dataset
 from Background_DataReader import Background
 from Signal_DataReader import Signal
@@ -15,13 +15,14 @@ from DataProcessing import DataProcessing
 Load delphes shared library located in 
 delphes install library directory
 """
-ROOT.gSystem.Load("install/lib/libDelphes")
+
+ROOT.gSystem.Load("../Delphes-3.5.0/libDelphes.so")
 
 try:
-    ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
-    ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
+  ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
+  ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
 except:
-    pass
+  pass
 
 
 ROOT.ROOT.EnableImplicitMT()

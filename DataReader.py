@@ -6,7 +6,6 @@ from numba import jit, jit_module
 import os, os.path
 from tqdm import tqdm, trange
 
-ROOT.gSystem.Load("install/lib/libDelphes")
 
 class Events(ROOT.TNamed):
     def __init__(self, name, title):

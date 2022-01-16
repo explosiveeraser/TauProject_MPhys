@@ -1,4 +1,7 @@
 #Name(Branch.Leaf):Min,Max;dtype;NxBins
+GenMissingET.MET:0,100;F;40
+GenMissingET.Eta:-15,15;F;40
+GenMissingET.Phi:-3.2,3.2;F;40
 Tower.ET:0,450;F;40
 Tower.Eta:-4.7,4.7;F;40
 Tower.Phi:-3.2,3.2;F;40
@@ -24,6 +27,9 @@ Jet.NeutralEnergyFraction:0.5,1;F;40
 Jet.ChargedEnergyFraction:0,0.5;F;40
 Jet.MeanSqDeltaR:0,0;D;40
 Jet.PTD:0,0;D;40
+MissingET.MET:0,130;F;40
+MissingET.Eta:-10,10;F;40
+MissingET.Phi:-3.2,3.2;F;40
 Track.Charge:-6,6;I;13
 Track.P:0,450;F;40
 Track.PT:0,230;F;40

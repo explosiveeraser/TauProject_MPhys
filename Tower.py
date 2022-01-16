@@ -11,8 +11,6 @@ from numba import jit, jit_module
 import os, os.path
 from tqdm import tqdm, trange
 
-ROOT.gSystem.Load("install/lib/libDelphes")
-
 class Tower_():
 
     def __init__(self, entry, evt, weight, tower):
@@ -23,4 +21,11 @@ class Tower_():
         self.ET = tower.ET
         self.Eta = tower.Eta
         self.Phi = tower.Phi
+        self.deltaEta = 0
+        self.deltaPhi = 0
+        self.deltaR = 0
 
+    def Jet_Association(self, jetEta, jetPhi):
+        self.deltaEta = jetEta - self.Eta
+        self.deltaPhi = jetPhi - self.Phi
+        self.deltaR = math.sqrt((self.deltaEta)**2+(self.deltaPhi)**2)

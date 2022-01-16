@@ -15,13 +15,13 @@ from Jet import Jet_
 from Track import Track_
 from Tower import Tower_
 
-ROOT.gSystem.Load("install/lib/libDelphes")
+ROOT.gSystem.Load("../Delphes-3.5.0/libDelphes.so")
 
 try:
-    ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
-    ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
+  ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
+  ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
 except:
-    pass
+  pass
 
 class Signal(Dataset):
 

@@ -14,11 +14,11 @@ from tqdm import tqdm, trange
 Load delphes shared library located in 
 delphes install library directory
 """
-ROOT.gSystem.Load("install/lib/libDelphes")
+ROOT.gSystem.Load("/home/a/Delphes-3.5.0/libDelphes")
 
 try:
-    ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
-    ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
+    ROOT.gInterpreter.Declare('#include "/home/a/Delphes-3.5.0/classes/DelphesClasses.h"')
+    ROOT.gInterpreter.Declare('#include "/home/a/Delphes-3.5.0/external/ExRootAnalysis/ExRootTreeReader.h"')
 except:
     pass
 

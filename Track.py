@@ -11,8 +11,6 @@ from numba import jit, jit_module
 import os, os.path
 from tqdm import tqdm, trange
 
-ROOT.gSystem.Load("install/lib/libDelphes")
-
 class Track_():
 
     def __init__(self, entry, idx, event, track_obj, track_particle):
@@ -20,8 +18,22 @@ class Track_():
         self.idx = idx
         self.event = event
         self.track_obj = track_obj
+        self.P = track_obj.P
         self.PT = track_obj.PT
         self.Eta = track_obj.Eta
         self.Phi = track_obj.Phi
+        self.L = track_obj.L
+        self.D0 = track_obj.D0
+        self.DZ = track_obj.DZ
+        self.ErrorD0 = track_obj.ErrorD0
+        self.ErrorDZ = track_obj.ErrorDZ
         self.particle = track_particle
         self.TruthTau = self.particle.PID == 15 or self.particle.PID == -15
+        self.deltaEta = 0
+        self.deltaPhi = 0
+        self.deltaR = 0
+
+    def Jet_Association(self, jetEta, jetPhi):
+        self.deltaEta = jetEta - self.Eta
+        self.deltaPhi = jetPhi - self.Phi
+        self.deltaR = math.sqrt((self.deltaEta)**2+(self.deltaPhi)**2)

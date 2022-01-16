@@ -9,7 +9,7 @@ import numba
 Load delphes shared library located in 
 delphes install library directory
 """
-ROOT.gSystem.Load("install/lib/libDelphes")
+
 
 @ROOT.Numba.Declare(['RVec<unsigned int>'], 'RVec<int>')
 def find_tagged_jets(tautag):

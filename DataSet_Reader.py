@@ -4,14 +4,13 @@ import math
 
 import numpy as np
 import ROOT
-import pandas as pd
+#import pandas as pd
 from ROOT import gROOT
 import numba
 from numba import jit, jit_module
 import os, os.path
 from tqdm import tqdm, trange
 
-ROOT.gSystem.Load("install/lib/libDelphes")
 
 
 class Dataset:
@@ -75,6 +74,7 @@ class Dataset:
                         self._HistConfig[branch][leaf] = [(float(minimum), float(maximum)), str(dtype), int(NxBins)]
                     else:
                         self._HistConfig[branch] = {}
+
 
     def Book_Histograms(self):
         for branch in self._HistConfig.keys():

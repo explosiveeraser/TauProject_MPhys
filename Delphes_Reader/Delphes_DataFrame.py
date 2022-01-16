@@ -9,10 +9,6 @@ import os, os.path
 from tqdm import tqdm, trange
 
 
-ROOT.gSystem.Load("install/lib/libDelphes")
-
-
-
 class DelphesDataFrame(ROOT.RDataFrame):
 
     def __init__(self, directory):

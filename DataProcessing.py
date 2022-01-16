@@ -13,13 +13,7 @@ from Signal_DataReader import Signal
 Load delphes shared library located in 
 delphes install library directory
 """
-ROOT.gSystem.Load("install/lib/libDelphes")
 
-try:
-    ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
-    ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
-except:
-    pass
 
 #Convention Signal First and Background Second
 class DataProcessing():
@@ -132,6 +126,7 @@ class DataProcessing():
                     self.canvases["TauCan_{}".format(c)].Divide(3, 3)
                     self.canvases["TauCan_{}".format(c)].cd(0)
                     j = 1
+
 
     def Print_Test(self):
         self.signal.print_test_arrays(self.signal.JetArray)
