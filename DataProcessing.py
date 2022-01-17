@@ -127,6 +127,101 @@ class DataProcessing():
                     self.canvases["TauCan_{}".format(c)].cd(0)
                     j = 1
 
+    def Sig_Back_Hist(self):
+        if not self.Hist_started:
+            self.canvases["TauCan_0"] = ROOT.TCanvas("TauCan_0", "TauCan_0")
+            self.canvases["TauCan_0"].Divide(3, 3)
+            self.canvases["TauCan_0"].cd(0)
+            self.text = ROOT.TText(.5, .5, "Plots")
+            c = 0
+            j = 1
+            self.Hist_started = True
+        else:
+            j = 1
+            c = len(self.canvases) + 1
+            self.canvases["TauCan_{}".format(c)] = ROOT.TCanvas("TauCan_{}".format(c), "TauCan_{}".format(c))
+            self.canvases["TauCan_{}".format(c)].Divide(3, 3)
+            self.canvases["TauCan_{}".format(c)].cd(0)
+        for branch in tqdm(self.background.Histograms):
+            for leaf in self.background.Histograms[branch]:
+                self.canvases["TauCan_{}".format(c)].cd(j)
+                ymax = self._get_user_ranges(self.signal.Histograms[branch][leaf], self.background.Histograms[branch][leaf])
+                self.background.Histograms[branch][leaf].GetYaxis().SetRangeUser(0, ymax * 1.2)
+                self.signal.Histograms[branch][leaf].GetYaxis().SetRangeUser(0, ymax * 1.2)
+                self.background.Histograms[branch][leaf].Draw("HIST")
+                self.signal.Histograms[branch][leaf].SetLineColor(ROOT.kRed)
+                self.signal.Histograms[branch][leaf].Draw("HIST SAMES0")
+                if self.background.Histograms[branch][leaf].Integral() == 0 or self.signal.Histograms[branch][
+                    leaf].Integral() == 0:
+                    chi_test = self.background.Histograms[branch][leaf].Chi2Test(self.signal.Histograms[branch][leaf],
+                                                                           option="WW NORM")
+                    self.text.DrawTextNDC(.0, .0, "Chi2Test: {}".format(chi_test))
+                else:
+                    k_test = self.background.Histograms[branch][leaf].KolmogorovTest(self.signal.Histograms[branch][leaf])
+                    self.text.DrawTextNDC(.0, .0, "Kolmogorov Test: {}".format(k_test))
+                self.legend["legend_{}_{}".format(c, j)] = ROOT.TLegend(0.05, 0.85, 0.2, 0.95)
+                self.legend["legend_{}_{}".format(c, j)].SetHeader("Histogram Colors:")
+                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.background.Histograms[branch][leaf],
+                                                             "Background Data", "L")
+                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.signal.Histograms[branch][leaf],
+                                                             "Signal Data", "L")
+                self.legend["legend_{}_{}".format(c, j)].Draw()
+                j += 1
+                if j > 9:
+                    self.canvases["TauCan_{}".format(c)].Update()
+                    c += 1
+                    self.canvases["TauCan_{}".format(c)] = ROOT.TCanvas("TauCan_{}".format(c), "TauCan_{}".format(c))
+                    self.canvases["TauCan_{}".format(c)].Divide(3, 3)
+                    self.canvases["TauCan_{}".format(c)].cd(0)
+                    j = 1
+
+    def Tau_Sig_Back_Hist(self):
+        if not self.Hist_started:
+            self.canvases["TauCan_0"] = ROOT.TCanvas("TauCan_0", "TauCan_0")
+            self.canvases["TauCan_0"].Divide(3, 3)
+            self.canvases["TauCan_0"].cd(0)
+            self.text = ROOT.TText(.5, .5, "Plots")
+            c = 0
+            j = 1
+            self.Hist_started = True
+        else:
+            j = 1
+            c = len(self.canvases) + 1
+            self.canvases["TauCan_{}".format(c)] = ROOT.TCanvas("TauCan_{}".format(c), "TauCan_{}".format(c))
+            self.canvases["TauCan_{}".format(c)].Divide(3, 3)
+            self.canvases["TauCan_{}".format(c)].cd(0)
+        for branch in tqdm(self.background.Tau_Histograms):
+            for leaf in self.background.Tau_Histograms[branch]:
+                self.canvases["TauCan_{}".format(c)].cd(j)
+                ymax = self._get_user_ranges(self.background.Tau_Histograms[branch][leaf], self.signal.Tau_Histograms[branch][leaf])
+                self.background.Tau_Histograms[branch][leaf].GetYaxis().SetRangeUser(0, ymax * 1.2)
+                self.signal.Tau_Histograms[branch][leaf].GetYaxis().SetRangeUser(0, ymax * 1.2)
+                self.background.Tau_Histograms[branch][leaf].Draw("HIST")
+                self.signal.Tau_Histograms[branch][leaf].SetLineColor(ROOT.kRed)
+                self.signal.Tau_Histograms[branch][leaf].Draw("HIST SAMES0")
+                if self.background.Tau_Histograms[branch][leaf].Integral() == 0 or self.signal.Tau_Histograms[branch][
+                    leaf].Integral() == 0:
+                    chi_test = self.background.Tau_Histograms[branch][leaf].Chi2Test(self.signal.Tau_Histograms[branch][leaf],
+                                                                           option="WW NORM")
+                    self.text.DrawTextNDC(.0, .0, "Chi2Test: {}".format(chi_test))
+                else:
+                    k_test = self.background.Tau_Histograms[branch][leaf].KolmogorovTest(self.signal.Tau_Histograms[branch][leaf])
+                    self.text.DrawTextNDC(.0, .0, "Kolmogorov Test: {}".format(k_test))
+                self.legend["legend_{}_{}".format(c, j)] = ROOT.TLegend(0.05, 0.85, 0.2, 0.95)
+                self.legend["legend_{}_{}".format(c, j)].SetHeader("Histogram Colors:")
+                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.background.Tau_Histograms[branch][leaf],
+                                                             "Tau Tagged Background Data", "L")
+                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.signal.Tau_Histograms[branch][leaf],
+                                                             "Tau Tagged Signal Data", "L")
+                self.legend["legend_{}_{}".format(c, j)].Draw()
+                j += 1
+                if j > 9:
+                    self.canvases["TauCan_{}".format(c)].Update()
+                    c += 1
+                    self.canvases["TauCan_{}".format(c)] = ROOT.TCanvas("TauCan_{}".format(c), "TauCan_{}".format(c))
+                    self.canvases["TauCan_{}".format(c)].Divide(3, 3)
+                    self.canvases["TauCan_{}".format(c)].cd(0)
+                    j = 1
 
     def Print_Test(self):
         self.signal.print_test_arrays(self.signal.JetArray)

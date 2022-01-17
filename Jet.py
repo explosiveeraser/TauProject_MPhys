@@ -109,7 +109,10 @@ class Jet_():
                 sE1 += tower.ET
             elif tower.deltaR < deltaR2:
                 sE2 += tower.ET
-        self.f_cent = sE1/sE2
+        try:
+            self.f_cent = sE1/sE2
+        except:
+            self.f_cent = 9999999999
 
     def Inverse_MomFrac_LeadTrack(self):
         TE_C = 0
@@ -119,7 +122,10 @@ class Jet_():
         for track in self.Core_Tracks:
             if track.PT >= hPT:
                 hPT = track.PT
-        self.iF_leadtrack = TE_C/hPT
+        try:
+            self.iF_leadtrack = TE_C/hPT
+        except:
+            self.iF_leadtrack = 99999999
 
     def Maximum_deltaR(self):
         self.max_deltaR = 0
@@ -128,11 +134,17 @@ class Jet_():
                 self.max_deltaR = track.deltaR
 
     def impactP_leadTrack(self):
-        leadtrack = self.Core_Tracks[0]
-        for track in self.Core_Tracks:
-            if track.PT >= leadtrack.PT:
-                leadtrack = track
-        self.impactD0 = leadtrack.D0/leadtrack.ErrorD0
+        try:
+            leadtrack = self.Core_Tracks[0]
+            for track in self.Core_Tracks:
+                if track.PT >= leadtrack.PT:
+                    leadtrack = track
+            try:
+                self.impactD0 = leadtrack.D0/leadtrack.ErrorD0
+            except:
+                self.impactD0 = 999999999
+        except:
+            self.impactD0 = 99999999
 
     #def TransFlightPath
 
@@ -143,7 +155,10 @@ class Jet_():
             Iso_PT += track.PT
         for track in self.Tracks:
             All_PT += track.PT
-        self.Ftrack_Iso = Iso_PT/All_PT
+        try:
+            self.Ftrack_Iso = Iso_PT/All_PT
+        except:
+            self.Ftrack_Iso = 999999999
 
     #def mass_TandEMSystem(self):
      #find track masses (use jitted function)?

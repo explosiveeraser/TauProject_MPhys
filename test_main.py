@@ -35,7 +35,9 @@ Data = DataProcessing(sig_dir, back_dir)
 
 Data.Sig_Hist_Tau()
 Data.Back_Hist_Tau()
-Data.Print_Test()
+Data.Tau_Sig_Back_Hist()
+Data.Sig_Back_Hist()
+#Data.Print_Test()
 Data.Print_Num_of_Tau()
 Data.Print_Canvases()
 

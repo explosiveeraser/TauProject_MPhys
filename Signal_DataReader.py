@@ -79,21 +79,21 @@ class Signal(Dataset):
                 self.num_of_object["Jet"] += 1
                 new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, tracks, jet.Constituents)
                 self.JetArray.append(new_jet)
-                self.Fill_Histograms("Jet", jet, weight)
-                if new_jet.TruthTau:
-                    self.Fill_Tau_Histograms("Jet", jet, weight)
+                self.Fill_Histograms("Jet", jet, weight, new_jet)
+                if new_jet.TruthTau == 1:
+                    self.Fill_Tau_Histograms("Jet", jet, weight, new_jet)
                 for Track in new_jet.Tracks:
-                    self.Fill_Histograms("Track", Track.track_obj, weight)
-                    if new_jet.TruthTau:
-                        self.Fill_Tau_Histograms("Track", Track.track_obj, weight)
+                    self.Fill_Histograms("Track", Track.track_obj, weight, Track)
+                    if new_jet.TruthTau == 1:
+                        self.Fill_Tau_Histograms("Track", Track.track_obj, weight, Track)
                 for Tower in new_jet.Towers:
-                    self.Fill_Histograms("Tower", Tower.tower_obj, weight)
-                    if new_jet.TruthTau:
-                        self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight)
+                    self.Fill_Histograms("Tower", Tower.tower_obj, weight, Tower)
+                    if new_jet.TruthTau == 1:
+                        self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight, Tower)
             for branch in {"GenMissingET", "MissingET", "ScalarET"}:
                 if branch in list(self.Histograms.keys()):
                     num = self._branchReader[branch].GetEntries()
                     for idx in range(0, num):
                         obj = self._branchReader[branch].At(idx)
-                        self.Fill_Histograms(branch, obj, weight)
+                        self.Fill_Histograms(branch, obj, weight, None)
         self.Normalize_Histograms()

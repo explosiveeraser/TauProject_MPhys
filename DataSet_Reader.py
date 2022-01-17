@@ -68,13 +68,13 @@ class Dataset:
                     [leaf, rest] = rest.split(":", 1)
                     [minimum, rest] = rest.split(",", 1)
                     [maximum, rest] = rest.split(";", 1)
-                    [dtype, NxBins] = rest.split(";", 1)
-                    NxBins = NxBins.split("\n")[0]
+                    [dtype, rest] = rest.split(";", 1)
+                    [NxBins, Old_New] = rest.split(";", 1)
+                    Old_New = Old_New.split("\n")[0]
                     if self._HistConfig.__contains__(branch):
-                        self._HistConfig[branch][leaf] = [(float(minimum), float(maximum)), str(dtype), int(NxBins)]
+                        self._HistConfig[branch][leaf] = [(float(minimum), float(maximum)), str(dtype), int(NxBins), int(Old_New)]
                     else:
                         self._HistConfig[branch] = {}
-
 
     def Book_Histograms(self):
         for branch in self._HistConfig.keys():
@@ -85,9 +85,10 @@ class Dataset:
                 maximum = self._HistConfig[branch][leaf][0][1]
                 dtype = self._HistConfig[branch][leaf][1]
                 NxBins = self._HistConfig[branch][leaf][2]
-                self.Add_Histogram(branch, leaf, minimum, maximum, dtype=dtype, NxBins=NxBins)
+                Old_New = self._HistConfig[branch][leaf][3]
+                self.Add_Histogram(branch, leaf, minimum, maximum, dtype=dtype, NxBins=NxBins, Old_New=Old_New)
 
-    def Add_Histogram(self, branch, leaf, minimum, maximum, dtype="F", NxBins=128):
+    def Add_Histogram(self, branch, leaf, minimum, maximum, dtype="F", NxBins=128, Old_New=1):
         if maximum != minimum:
             if "F" in dtype:
                 self.Histograms[branch][leaf] = ROOT.TH1F(branch+"."+leaf, branch+"."+leaf, NxBins, minimum, maximum)
@@ -106,27 +107,41 @@ class Dataset:
                 self.Tau_Histograms[branch][leaf] = ROOT.TH1I(branch + "." + leaf, branch + "." + leaf, NxBins,
                                                           int(minimum), int(maximum))
 
-    def Fill_Histograms(self, branch, object, weight):
+    def Fill_Histograms(self, branch, object, weight, Def_Obj):
         if branch in self.Histograms.keys():
             for leaf in self.Histograms[branch]:
                 if self.Histograms[branch][leaf] != None:
                     dtype = self._HistConfig[branch][leaf][1]
-                    if "I" in dtype or "B" in dtype:
-                        self.Histograms[branch][leaf].Fill(numba.types.int32(getattr(object, leaf)), weight)
-                    else:
-                        self.Histograms[branch][leaf].Fill(getattr(object, leaf), weight)
+                    Old_New = self._HistConfig[branch][leaf][3]
+                    if Old_New == 1:
+                        if "I" in dtype or "B" in dtype:
+                            self.Histograms[branch][leaf].Fill(numba.types.int32(getattr(object, leaf)), weight)
+                        else:
+                            self.Histograms[branch][leaf].Fill(getattr(object, leaf), weight)
+                    elif Old_New == 2:
+                        if "I" in dtype or "B" in dtype:
+                            self.Histograms[branch][leaf].Fill(getattr(Def_Obj, leaf), weight)
+                        else:
+                            self.Histograms[branch][leaf].Fill(getattr(Def_Obj, leaf), weight)
         else:
             pass
 
-    def Fill_Tau_Histograms(self, branch, object, weight):
+    def Fill_Tau_Histograms(self, branch, object, weight, Def_Obj):
         if branch in self.Tau_Histograms.keys():
             for leaf in self.Tau_Histograms[branch]:
                 if self.Tau_Histograms[branch][leaf] != None:
                     dtype = self._HistConfig[branch][leaf][1]
-                    if "I" in dtype or "B" in dtype:
-                        self.Tau_Histograms[branch][leaf].Fill(numba.types.int32(getattr(object, leaf)), weight)
-                    else:
-                        self.Tau_Histograms[branch][leaf].Fill(getattr(object, leaf), weight)
+                    Old_New = self._HistConfig[branch][leaf][3]
+                    if Old_New == 1:
+                        if "I" in dtype or "B" in dtype:
+                            self.Tau_Histograms[branch][leaf].Fill(numba.types.int32(getattr(object, leaf)), weight)
+                        else:
+                            self.Tau_Histograms[branch][leaf].Fill(getattr(object, leaf), weight)
+                    elif Old_New == 2:
+                        if "I" in dtype or "B" in dtype:
+                            self.Tau_Histograms[branch][leaf].Fill(getattr(Def_Obj, leaf), weight)
+                        else:
+                            self.Tau_Histograms[branch][leaf].Fill(getattr(Def_Obj, leaf), weight)
         else:
             pass
 
@@ -136,6 +151,8 @@ class Dataset:
                 if self.Histograms[branch][leaf] != None:
                     integral = self.Histograms[branch][leaf].Integral()
                     integral2 = self.Tau_Histograms[branch][leaf].Integral()
+                    print(integral)
+                    print(integral2)
                     if integral != 0. and integral2 != 0.:
                         self.Histograms[branch][leaf].Scale(1. / integral, "height")
                         self.Tau_Histograms[branch][leaf].Scale(1. / integral2, "height")
