@@ -27,8 +27,12 @@ class Jet_():
         self.Phi = jet_obj.Phi
         self.DR = math.sqrt((jet_obj.DeltaEta) **2 + (jet_obj.DeltaPhi) **2)
         self.MeanSqDR = jet_obj.MeanSqDeltaR
-        self.TauCan_1Prong = False
-        self.TauCan_3Prong = False
+        if self.PT > 10.0 and abs(self.Eta) < 2.5:
+            self.TauCan_1Prong = True
+            self.TauCan_3Prong = True
+        else:
+            self.TauCan_1Prong = False
+            self.TauCan_3Prong = False
         self.particles = particles
         self.TruthTau = self._Contains_Tau(self.particles)
         self.TruthTau = jet_obj.TauTag

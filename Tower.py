@@ -18,9 +18,14 @@ class Tower_():
         self.event = evt
         self.weight = weight
         self.tower_obj = tower
+        self.E = tower.E
         self.ET = tower.ET
         self.Eta = tower.Eta
         self.Phi = tower.Phi
+        self.Edges = tower.Edges
+        self.Eem = tower.Eem
+        self.Ehad = tower.Ehad
+        self.T = tower.T
         self.deltaEta = 0
         self.deltaPhi = 0
         self.deltaR = 0

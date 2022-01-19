@@ -21,6 +21,8 @@ class DataProcessing():
     def __init__(self, SigDir, BackDir):
         self.signal = Signal(SigDir)
         self.background = Background(BackDir)
+        self.signal.write_taucan_ttree("signal_tree")
+        self.background.write_taucan_ttree("background_tree")
         self.canvases = {}
         self.legend = {}
         self.Hist_started = False
