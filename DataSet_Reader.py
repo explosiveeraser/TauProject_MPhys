@@ -19,11 +19,15 @@ gROOT.ProcessLine(
     Float_t PT;\
     Float_t Eta;\
     Float_t Phi;\
+    Float_t deltaEta;\
+    Float_t deltaPhi;\
+    Float_t charge;\
+    Float_t NCharged;\
+    Float_t NNeutral;\
     Float_t deltaR;\
     Float_t f_cent;\
     Float_t iF_leadtrack;\
     Float_t max_deltaR;\
-    Float_t impactD0;\
     Float_t Ftrack_Iso;\
 };""")
 
@@ -215,22 +219,28 @@ class Dataset:
             HL = ROOT.HL_vars()
             track = ROOT.NewTrack()
             tower = ROOT.NewTower()
-            tree.Branch( 'HL_Variables' , HL, 'entry:index:weight:PT:Eta:Phi:deltaR:f_cent:iF_leadtrack:max_deltaR:impactD0:Ftrack_Iso')
+            tree.Branch( 'HL_Variables' , HL, 'entry:index:weight:PT:Eta:Phi:deltaEta:deltaPhi:charge:NCharged:NNeutral:deltaR:f_cent:iF_leadtrack:max_deltaR:Ftrack_Iso')
             BR_track = tree.Branch( 'Track', track, 'entry:index:P:PT:Eta:Phi:L:D0:DZ:ErrorD0:ErrorDZ:deltaEta:deltaPhi:deltaR')
             BR_tower = tree.Branch( 'Tower', tower, 'entry:weight:E:ET:Eta:Phi:Edges:Eem:Ehad:T:deltaEta:deltaPhi:deltaR')
             for jet in tqdm(self.JetArray):
-                if jet.PT >= 10.0 and jet.Eta <= 2.5 and len(jet.Tracks) >= 3 and len(jet.Towers) > 1:
+                if jet.PT >= 10.0 and jet.Eta <= 2.5 and len(jet.Tracks) >= 1 and len(jet.Towers) > 1:
                     HL.entry = int(jet.entry)
                     HL.index = int(jet.idx)
                     #HL.event = int(jet.event)
-                    HL.weight = jet.PT
+                    HL.weight = jet.weight
+                    HL.PT = jet.PT
                     HL.Eta = jet.Eta
                     HL.Phi = jet.Phi
+                    HL.deltaEta = jet.deltaEta
+                    HL.deltaPhi = jet.deltaPhi
+                    HL.charge = jet.charge
+                    HL.NCharged = jet.NCharged
+                    HL.NNeutral = jet.NNeutral
                     HL.deltaR =jet.DR
                     HL.f_cent = jet.f_cent
                     HL.iF_leadtrack = jet.iF_leadtrack
                     HL.max_deltaR = jet.max_deltaR
-                    HL.impactD0 = jet.impactD0
+#                    HL.impactD0 = jet.impactD0
                     HL.Ftrack_Iso = jet.Ftrack_Iso
                     for con_track in jet.Tracks:
                         track.entry = int(con_track.entry)

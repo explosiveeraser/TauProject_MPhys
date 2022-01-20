@@ -25,6 +25,11 @@ class Jet_():
         self.PT = jet_obj.PT
         self.Eta = jet_obj.Eta
         self.Phi = jet_obj.Phi
+        self.deltaEta = jet_obj.DeltaEta
+        self.deltaPhi = jet_obj.DeltaPhi
+        self.charge = jet_obj.Charge
+        self.NCharged = jet_obj.NCharged
+        self.NNeutral = jet_obj.NNeutrals
         self.DR = math.sqrt((jet_obj.DeltaEta) **2 + (jet_obj.DeltaPhi) **2)
         self.MeanSqDR = jet_obj.MeanSqDeltaR
         if self.PT > 10.0 and abs(self.Eta) < 2.5:
@@ -50,7 +55,7 @@ class Jet_():
         self.Central_Energy_Fraction()
         self.Inverse_MomFrac_LeadTrack()
         self.Maximum_deltaR()
-        self.impactP_leadTrack()
+#        self.impactP_leadTrack()
         self.F_IsoTracks()
 
     def _Find_Tracks(self, evt_tracks):
@@ -137,18 +142,20 @@ class Jet_():
             if track.deltaR >= self.max_deltaR:
                 self.max_deltaR = track.deltaR
 
-    def impactP_leadTrack(self):
-        try:
-            leadtrack = self.Core_Tracks[0]
-            for track in self.Core_Tracks:
-                if track.PT >= leadtrack.PT:
-                    leadtrack = track
-            try:
-                self.impactD0 = leadtrack.D0/leadtrack.ErrorD0
-            except:
-                self.impactD0 = 999999999
-        except:
-            self.impactD0 = 99999999
+
+#    def impactP_leadTrack(self):
+#        try:
+#            leadtrack = self.Core_Tracks[0]
+#            for track in self.Core_Tracks:
+#                if track.PT >= leadtrack.PT:
+#                    leadtrack = track
+#            try:
+#                self.impactD0 = leadtrack.D0/leadtrack.ErrorD0
+#            except:
+#                self.impactD0 = 999999999
+#        except:
+#            self.impactD0 = 99999999
+
 
     #def TransFlightPath
 
