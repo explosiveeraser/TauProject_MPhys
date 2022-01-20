@@ -169,7 +169,7 @@ class Jet_():
         try:
             self.Ftrack_Iso = Iso_PT/All_PT
         except:
-            self.Ftrack_Iso = 999999999
+            self.Ftrack_Iso = 0
 
     #def mass_TandEMSystem(self):
      #find track masses (use jitted function)?
