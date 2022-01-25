@@ -40,7 +40,7 @@ class Jet_():
             self.TauCan_3Prong = False
         self.particles = particles
         self.TruthTau = self._Contains_Tau(self.particles)
-        self.TruthTau = jet_obj.TauTag
+        #self.TruthTau = jet_obj.TauTag
         self.constituents = constituents
         self.Tracks = []
         self.Towers = []

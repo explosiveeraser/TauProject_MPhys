@@ -57,7 +57,10 @@ gROOT.ProcessLine(
     Float_t ET;\
     Float_t Eta;\
     Float_t Phi;\
-    Float_t Edges[4];\
+    Float_t Edges0;\
+    Float_t Edges1;\
+    Float_t Edges2;\
+    Float_t Edges3;\
     Float_t Eem;\
     Float_t Ehad;\
     Float_t T;\
@@ -211,73 +214,6 @@ class Dataset:
                     if integral != 0. and integral2 != 0.:
                         self.Histograms[branch][leaf].Scale(1. / integral, "height")
                         self.Tau_Histograms[branch][leaf].Scale(1. / integral2, "height")
-
-    def write_taucan_ttree(self, fname):
-        for prong in {'1-Prong', '3-Prong'}:
-            file = ROOT.TFile("NewTTrees/"+str(fname)+"_"+prong+".root", "RECREATE")
-            tree = ROOT.TTree(fname, str(fname+"_"+prong+" Tree"))
-            HL = ROOT.HL_vars()
-            track = ROOT.NewTrack()
-            tower = ROOT.NewTower()
-            tree.Branch( 'HL_Variables' , HL, 'entry:index:weight:PT:Eta:Phi:deltaEta:deltaPhi:charge:NCharged:NNeutral:deltaR:f_cent:iF_leadtrack:max_deltaR:Ftrack_Iso')
-            BR_track = tree.Branch( 'Track', track, 'entry:index:P:PT:Eta:Phi:L:D0:DZ:ErrorD0:ErrorDZ:deltaEta:deltaPhi:deltaR')
-            BR_tower = tree.Branch( 'Tower', tower, 'entry:weight:E:ET:Eta:Phi:Edges:Eem:Ehad:T:deltaEta:deltaPhi:deltaR')
-            for jet in tqdm(self.JetArray):
-                if jet.PT >= 10.0 and jet.Eta <= 2.5 and len(jet.Tracks) >= 1 and len(jet.Towers) > 1:
-                    HL.entry = int(jet.entry)
-                    HL.index = int(jet.idx)
-                    #HL.event = int(jet.event)
-                    HL.weight = jet.weight
-                    HL.PT = jet.PT
-                    HL.Eta = jet.Eta
-                    HL.Phi = jet.Phi
-                    HL.deltaEta = jet.deltaEta
-                    HL.deltaPhi = jet.deltaPhi
-                    HL.charge = jet.charge
-                    HL.NCharged = jet.NCharged
-                    HL.NNeutral = jet.NNeutral
-                    HL.deltaR =jet.DR
-                    HL.f_cent = jet.f_cent
-                    HL.iF_leadtrack = jet.iF_leadtrack
-                    HL.max_deltaR = jet.max_deltaR
-#                    HL.impactD0 = jet.impactD0
-                    HL.Ftrack_Iso = jet.Ftrack_Iso
-                    for con_track in jet.Tracks:
-                        track.entry = int(con_track.entry)
-                        track.index = int(con_track.idx)
-                        #track.event = int(con_track.event)
-                        track.P = con_track.P
-                        track.PT = con_track.PT
-                        track.Eta = con_track.Eta
-                        track.Phi = con_track.Phi
-                        track.L = con_track.L
-                        track.D0 = con_track.D0
-                        track.DZ = con_track.DZ
-                        track.ErrorD0 = con_track.ErrorD0
-                        track.ErrorDZ = con_track.ErrorDZ
-                        track.deltaPhi = con_track.deltaPhi
-                        track.deltaEta = con_track.deltaEta
-                        track.deltaR = con_track.deltaR
-                        BR_track.Fill()
-                    for con_tower in jet.Towers:
-                        tower.entry = int(con_tower.entry)
-                       # tower.event = int(con_tower.event)
-                        tower.weight = con_tower.weight
-                        tower.E = con_tower.E
-                        tower.ET = con_tower.ET
-                        tower.Eta = con_tower.Eta
-                        tower.Phi = con_tower.Phi
-                        tower.Edges = con_tower.Edges
-                        tower.Eem = con_tower.Eem
-                        tower.Ehad = con_tower.Ehad
-                        tower.T = con_tower.T
-                        tower.deltaEta = tower.deltaEta
-                        tower.deltaPhi = tower.deltaPhi
-                        tower.deltaR = tower.deltaR
-                        BR_tower.Fill()
-                    tree.Fill()
-            tree.Print()
-            tree.Write()
 
 
     def print_num_of_each_object(self):

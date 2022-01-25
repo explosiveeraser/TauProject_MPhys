@@ -35,19 +35,6 @@ Background_File = TFile.Open("../NewTTrees/background_tree_1-Prong.root")
 Signal_Tree = Signal_File.Get('signal_tree')
 Background_Tree = Background_File.Get('background_tree;6')
 
-SignalDF = ROOT.RDataFrame(Signal_Tree)
-BackgroundDF = ROOT.RDataFrame(Background_Tree)
-
-print(SignalDF.GetColumnNames())
-
-#Do numpy approach for time being
-signalArray = SignalDF.AsNumpy()
-backArray = BackgroundDF.AsNumpy()
-
-SortedsignalArray = np.array([])
-SortedbackArray = np.array([])
-
-print(signalArray)
 
 
 
@@ -59,20 +46,20 @@ HLdense2 = Dense(128, activation='relu')(HLdense1)
 HLdense3 = Dense(16, activation='relu')(HLdense2)
 
 #Track Layers
-Track_input1 = Input(shape=(10,))
-Track_input2 = Input(shape=(10,))
+Track_input1 = Input(shape=(10, None))
+#Track_input2 = Input(shape=(10,))
 
-trackDense1 = Dense(32, activation='relu')(Track_input1)
-trackDense2 = Dense(32, activation='relu')(Track_input2)
+trackDense1 = Dense(32, activation='relu', input_dim=(10, None, None))(Track_input1)
+trackDense2 = Dense(32, activation='relu', input_dim=(10, None, None))(Track_input1)
 
-mergeTrack = Concatenate()([trackDense1, trackDense2])
+#mergeTrack = Concatenate()([trackDense1, trackDense2])
 
-trackLSTM1 = LSTM(32, input_shape=(10,10))(mergeTrack)
-trackLSTM2 = LSTM(32, input_shape=(10,10))(trackLSTM1)
+trackLSTM1 = LSTM(32)(trackDense2)
+trackLSTM2 = LSTM(32)(trackLSTM1)
 
 #Tower Layers
-Tower_input1 = Input(shape=(11,))
-Tower_input2 = Input(shape=(11,))
+Tower_input1 = Input(shape=(11,None))
+Tower_input2 = Input(shape=(11,None))
 
 towerDense1 = Dense(32, activation='relu')(Tower_input1)
 towerDense2 = Dense(32, activation='relu')(Tower_input2)
