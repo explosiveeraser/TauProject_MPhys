@@ -26,7 +26,7 @@ except:
 
 class Background(Dataset):
 
-    def __init__(self, directory, conf_fname="Hist_Config"):
+    def __init__(self, directory, conf_fname="Hist_Config", print_hist=True):
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -49,7 +49,7 @@ class Background(Dataset):
             self._leaves[leaf] = temp.GetTypeName()
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
-        self._nev = self._reader.GetEntries()
+        self._nev = self._reader.GetEntries() -45000
         for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
             self._branchReader[branch] = self._reader.UseBranch(branch)
             self.num_of_object[branch] = 0
@@ -70,60 +70,70 @@ class Background(Dataset):
             num_particles = self._branchReader["Particle"].GetEntries()
             for ldx in range(0, num_particles):
                 particle = self._branchReader["Particle"].At(ldx)
-                evt_particle = Particle_(entry, evt, particle)
+                evt_particle = Particle_(entry, evt, particle, hists=print_hist)
                 particles.append(evt_particle)
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
-                evt_track = Track_(entry, jdx, evt, track, track.Particle.GetObject())
+                evt_track = Track_(entry, jdx, evt, track, track.Particle.GetObject(), hists=print_hist)
                 tracks.append(evt_track)
             for kdx in range(0, num_towers):
                 tower = self._branchReader["Tower"].At(kdx)
-                evt_tower = Tower_(entry, evt, weight, tower)
+                evt_tower = Tower_(entry, evt, weight, tower, hists=print_hist)
                 towers.append(evt_tower)
             for idx in range(0, num_Jets):
                 jet = self._branchReader["Jet"].At(idx)
                 self.num_of_object["Jet"] += 1
-                new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents)
+                # new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents, hists=print_hist)
+                new_jet = Jet_(entry, idx, evt, weight, jet, None, particles, tracks, towers, None, hists=print_hist)
                 self.JetArray.append(new_jet)
-                self.Fill_Histograms("Jet", jet, weight, new_jet)
-                if new_jet.TruthTau:
-                    self.Fill_Tau_Histograms("Jet", jet, weight, new_jet)
-                for Track in new_jet.Tracks:
-                    self.Fill_Histograms("Track", Track.track_obj, weight, Track)
+                if print_hist:
+                    self.Fill_Histograms("Jet", jet, weight, new_jet)
                     if new_jet.TruthTau:
-                        self.Fill_Tau_Histograms("Track", Track.track_obj, weight, Track)
-                for Tower in new_jet.Towers:
-                    self.Fill_Histograms("Tower", Tower.tower_obj, weight, Tower)
-                    if new_jet.TruthTau:
-                        self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight, Tower)
-                for Particle in new_jet.Particles:
-                    self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
-                    if Particle.PID == 15 or Particle.PID == -15:
+                        self.Fill_Tau_Histograms("Jet", jet, weight, new_jet)
+                    for Track in new_jet.Tracks:
+                        self.Fill_Histograms("Track", Track.track_obj, weight, Track)
+                        if new_jet.TruthTau:
+                            self.Fill_Tau_Histograms("Track", Track.track_obj, weight, Track)
+                    for Tower in new_jet.Towers:
+                        self.Fill_Histograms("Tower", Tower.tower_obj, weight, Tower)
+                        if new_jet.TruthTau:
+                            self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight, Tower)
+                    for Particle in new_jet.Particles:
                         self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
-        for branch in {"GenMissingET", "MissingET", "ScalarET", "Particle"}:
-                if branch in list(self.Histograms.keys()):
-                    num = self._branchReader[branch].GetEntriesFast()
-                    for idx in range(0, num):
-                        obj = self._branchReader[branch].At(idx)
-                        self.Fill_Histograms(branch, obj, weight, None)
-        self.Normalize_Histograms()
+                        if Particle.PID == 15 or Particle.PID == -15:
+                            self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
+        if print_hist:
+            for branch in {"GenMissingET", "MissingET", "ScalarET", "Particle"}:
+                    if branch in list(self.Histograms.keys()):
+                        num = self._branchReader[branch].GetEntriesFast()
+                        for idx in range(0, num):
+                            obj = self._branchReader[branch].At(idx)
+                            self.Fill_Histograms(branch, obj, weight, None)
+        if print_hist:
+            self.Normalize_Histograms()
+
 
     def write_taucan_ttree(self, fname):
         for prong in {'1-Prong', '3-Prong'}:
             file = ROOT.TFile("NewTTrees/" + str(fname) + "_" + prong + ".root", "RECREATE")
             tree = ROOT.TTree(fname, str(fname + "_" + prong + " Tree"))
             hlvars = ROOT.HL_vars()
+            nTrack = ROOT.nTrack
+            nTower = ROOT.nTower
             track = ROOT.NewTrack()
             tower = ROOT.NewTower()
             tree.Branch("HL_vars", hlvars, 'jet_entry/F:jet_index/F:jet_weight/F:jet_PT/F:jet_Eta/F:jet_Phi/F:jet_deltaEta/F:jet_deltaPhi/F:jet_charge/F:jet_NCharged/F:jet_NNeutral/F:jet_deltaR/F:jet_f_cent/F:jet_iF_leadtrack/F:jet_Ftrack_Iso/F')
+            tree.Branch("nTrack", nTrack, 'nTrack/I')
+            tree.Branch("nTower", nTower, 'nTower/I')
             BR_track = tree.Branch('Track', track,
-                                   'nTrack/I:entry[nTrack]/F:index[nTrack]/F:P[nTrack]/F:PT[nTrack]/F:Eta[nTrack]/F:Phi[nTrack]/F:L[nTrack]/F:D0[nTrack]/F:DZ[nTrack]/F:ErrorD0[nTrack]/F:ErrorDZ[nTrack]/F:deltaEta[nTrack]/F:deltaPhi[nTrack]/F:deltaR[nTrack]/F')
+                                   'entry[nTrack]/F:index[nTrack]/F:P[nTrack]/F:PT[nTrack]/F:Eta[nTrack]/F:Phi[nTrack]/F:L[nTrack]/F:D0[nTrack]/F:DZ[nTrack]/F:ErrorD0[nTrack]/F:ErrorDZ[nTrack]/F:deltaEta[nTrack]/F:deltaPhi[nTrack]/F:deltaR[nTrack]/F')
             BR_tower = tree.Branch('Tower', tower,
-                                   'nTower/I:entry[nTower]/F:weight[nTower]/F:E[nTower]/F:ET[nTower]/F:Eta[nTower]/F:Phi[nTower]/F:Edges0[nTower]/F:Edges1[nTower]/F:Edges2[nTower]/F:Edges3[nTower]/F:Eem[nTower]/F:Ehad[nTower]/F:T[nTower]/F:deltaEta[nTower]/F:deltaPhi[nTower]/F:deltaR[nTower]/F')
+                                   'entry[nTower]/F:weight[nTower]/F:E[nTower]/F:ET[nTower]/F:Eta[nTower]/F:Phi[nTower]/F:Edges0[nTower]/F:Edges1[nTower]/F:Edges2[nTower]/F:Edges3[nTower]/F:Eem[nTower]/F:Ehad[nTower]/F:T[nTower]/F:deltaEta[nTower]/F:deltaPhi[nTower]/F:deltaR[nTower]/F')
             for jet in tqdm(self.JetArray):
                 if jet.PT >= 20.0 and jet.Eta <= 2.5 and len(jet.Tracks) >= 1 and len(jet.Towers) >= 1:
-                    hlvars.jet_entry = jet.entry
-                    hlvars.jet_index = jet.idx
+                    hlvars.jet_entry = int(jet.entry)
+                    print(jet.idx)
+                    hlvars.jet_index = int(jet.idx)
                     hlvars.jet_weight = jet.weight
                     hlvars.jet_PT = jet.PT
                     hlvars.jet_Eta = jet.Eta
@@ -140,12 +150,12 @@ class Background(Dataset):
                     hlvars.jet_Ftrack_Iso = jet.Ftrack_Iso
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
-                    track.nTrack = n_tr
-                    tower.nTower = n_to
-                    for idx in range(0, 4):
+                    track.nTrack = int(n_tr)
+                    tower.nTower = int(n_to)
+                    for idx in range(0, n_tr):
                         con_track = jet.Tracks[idx]
-                        track.entry[idx] = con_track.entry
-                        track.index[idx] = con_track.idx
+                        track.entry[idx] = int(con_track.entry)
+                        track.index[idx] = int(con_track.idx)
                         track.P[idx] = con_track.P
                         track.PT[idx] = con_track.PT
                         track.Eta[idx] = con_track.Eta
@@ -158,9 +168,9 @@ class Background(Dataset):
                         track.deltaEta[idx] = con_track.deltaEta
                         track.deltaPhi[idx] = con_track.deltaPhi
                         track.deltaR[idx] = con_track.deltaR
-                    for jdx in range(0, 4):
+                    for jdx in range(0, n_to):
                         con_tower = jet.Towers[jdx]
-                        tower.entry[jdx] = con_tower.entry
+                        tower.entry[jdx]= int(con_tower.entry)
                         tower.weight[jdx] = con_tower.weight
                         tower.E[jdx] = con_tower.E
                         tower.ET[jdx] = con_tower.ET
@@ -179,4 +189,3 @@ class Background(Dataset):
                     tree.Fill()
             tree.Print()
             tree.Write()
-

@@ -13,11 +13,14 @@ from tqdm import tqdm, trange
 
 class Tower_():
 
-    def __init__(self, entry, evt, weight, tower):
+    def __init__(self, entry, evt, weight, tower, hists=True):
         self.entry = entry
         self.event = evt
         self.weight = weight
-        self.tower_obj = tower
+        if hists:
+            self.tower_obj = tower
+        else:
+            self.tower_obj = None
         self.particles = tower.Particles
         self.E = tower.E
         self.ET = tower.ET

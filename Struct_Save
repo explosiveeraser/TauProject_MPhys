@@ -1,0 +1,72 @@
+gROOT.ProcessLine(
+"""
+    struct HL_vars {\
+    Int_t jet_entry;\
+    Int_t jet_index;\
+    Float_t jet_weight;\
+    Float_t jet_PT;\
+    Float_t jet_Eta;\
+    Float_t jet_Phi;\
+    Float_t jet_deltaEta;\
+    Float_t jet_deltaPhi;\
+    Float_t jet_charge;\
+    Float_t jet_NCharged;\
+    Float_t jet_NNeutral;\
+    Float_t jet_deltaR;\
+    Float_t jet_f_cent;\
+    Float_t jet_iF_leadtrack;\
+    Float_t jet_max_deltaR;\
+    Float_t jet_Ftrack_Iso;\
+    };\
+""")
+
+gROOT.ProcessLine(
+"""
+    Int_t nTrack;\
+    Int_t nTower;\
+""")
+
+gROOT.ProcessLine(
+"""
+    const Int_t kMaxTrack = 4;\
+    struct NewTrack {\
+    Int_t nTrack;\
+    Int_t entry[kMaxTrack];\
+    Int_t index[kMaxTrack];\
+    Float_t P[kMaxTrack];\
+    Float_t PT[kMaxTrack];\
+    Float_t Eta[kMaxTrack];\
+    Float_t Phi[kMaxTrack];\
+    Float_t L[kMaxTrack];\
+    Float_t D0[kMaxTrack];\
+    Float_t DZ[kMaxTrack];\
+    Float_t ErrorD0[kMaxTrack];\
+    Float_t ErrorDZ[kMaxTrack];\
+    Float_t deltaEta[kMaxTrack];\
+    Float_t deltaPhi[kMaxTrack];\
+    Float_t deltaR[kMaxTrack];\
+};""")
+
+gROOT.ProcessLine(
+"""
+    const Int_t kMaxTower = 4;\
+    struct NewTower {\
+    Int_t nTower;\
+    Int_t entry[kMaxTower];\
+    Float_t weight[kMaxTower];\
+    Float_t E[kMaxTower];\
+    Float_t ET[kMaxTower];\
+    Float_t Eta[kMaxTower];\
+    Float_t Phi[kMaxTower];\
+    Float_t Edges0[kMaxTower];\
+    Float_t Edges1[kMaxTower];\
+    Float_t Edges2[kMaxTower];\
+    Float_t Edges3[kMaxTower];\
+    Float_t Eem[kMaxTower];\
+    Float_t Ehad[kMaxTower];\
+    Float_t T[kMaxTower];\
+    Float_t deltaEta[kMaxTower];\
+    Float_t deltaPhi[kMaxTower];\
+    Float_t deltaR[kMaxTower];\
+};"""
+)

@@ -16,12 +16,15 @@ from Tower import Tower_
 
 class Jet_():
 
-    def __init__(self, entry, idx, event, weight, jet_obj, particles, Event_Particles, Event_Tracks, Event_Towers,constituents):
+    def __init__(self, entry, idx, event, weight, jet_obj, particles, Event_Particles, Event_Tracks, Event_Towers, constituents, hists=True):
         self.entry = entry
         self.idx = idx
         self.event = event
         self.weight = weight
-        self.jet_obj = jet_obj
+        if hists:
+            self.jet_obj = jet_obj
+        else:
+            self.jet_obj = None
         self.PT = jet_obj.PT
         self.Eta = jet_obj.Eta
         self.Phi = jet_obj.Phi
@@ -35,7 +38,7 @@ class Jet_():
         self.num_particles = 0
         self.num_tracks = 0
         self.num_towers = 0
-        if self.PT > 10.0 and abs(self.Eta) < 2.5:
+        if self.PT > 20.0 and abs(self.Eta) < 2.5:
             self.TauCan_1Prong = True
             self.TauCan_3Prong = True
         else:
@@ -49,10 +52,10 @@ class Jet_():
         self.Tracks = []
         self.Towers = []
         self.Particles = []
-        self.Core_Tracks = []
-        self.Iso_Tracks = []
-        self.Core_Towers = []
-        self.Iso_Towers = []
+        # self.Core_Tracks = []
+        # self.Iso_Tracks = []
+        # self.Core_Towers = []
+        # self.Iso_Towers = []
         self.TruthTau = False
         self.numTaus = 0
         # self._Find_Tracks(Event_Tracks)
@@ -60,8 +63,8 @@ class Jet_():
         self._Find_Particles(Event_Particles)
         self._Find_Tracks(Event_Tracks)
         self._Find_Towers(Event_Towers)
-        self.Regions_Tracks()
-        self.Regions_Towers()
+#        self.Regions_Tracks()
+ #       self.Regions_Towers()
         self.Central_Energy_Fraction()
         self.Inverse_MomFrac_LeadTrack()
         self.Maximum_deltaR()
@@ -146,33 +149,34 @@ class Jet_():
     #                 print("True")
     #     return found_tau
 
-    def Regions_Tracks(self):
-        num = len(self.Tracks)
-        for idx in range(0, num):
-            track = self.Tracks[idx]
-            if track.deltaEta < 0.2:
-                self.Core_Tracks.append(track)
-            elif track.deltaEta >= 0.2:
-                self.Iso_Tracks.append(track)
-
-    def Regions_Towers(self):
-        num = len(self.Towers)
-        for idx in range(0, num):
-            tower = self.Towers[idx]
-            if tower.deltaEta < 0.2:
-                self.Core_Towers.append(tower)
-            elif tower.deltaEta >= 0.2:
-                self.Iso_Towers.append(tower)
+    # def Regions_Tracks(self):
+    #     num = len(self.Tracks)
+    #     for idx in range(0, num):
+    #         track = self.Tracks[idx]
+    #         if track.deltaEta < 0.2:
+    #             self.Core_Tracks.append(track)
+    #         elif track.deltaEta >= 0.2:
+    #             self.Iso_Tracks.append(track)
+    #
+    # def Regions_Towers(self):
+    #     num = len(self.Towers)
+    #     for idx in range(0, num):
+    #         tower = self.Towers[idx]
+    #         if tower.deltaEta < 0.2:
+    #             self.Core_Towers.append(tower)
+    #         elif tower.deltaEta >= 0.2:
+    #             self.Iso_Towers.append(tower)
 
     #may use Eem instead of ET
     def Central_Energy_Fraction(self, deltaR1=0.1, deltaR2=0.2):
         sE1 = 0
         sE2 = 0
-        for tower in self.Core_Towers:
-            if tower.deltaR < deltaR1:
-                sE1 += tower.ET
-            elif tower.deltaR < deltaR2:
-                sE2 += tower.ET
+        for tower in self.Towers:
+            if tower.CoreRegion:
+                if tower.deltaR < deltaR1:
+                    sE1 += tower.ET
+                elif tower.deltaR < deltaR2:
+                    sE2 += tower.ET
         try:
             self.f_cent = sE1/sE2
         except:
@@ -180,12 +184,14 @@ class Jet_():
 
     def Inverse_MomFrac_LeadTrack(self):
         TE_C = 0
-        for tower in self.Core_Towers:
-            TE_C += tower.ET
+        for tower in self.Towers:
+            if tower.CoreRegion:
+                TE_C += tower.ET
         hPT = 0
-        for track in self.Core_Tracks:
-            if track.PT >= hPT:
-                hPT = track.PT
+        for track in self.Tracks:
+            if track.CoreRegion:
+                if track.PT >= hPT:
+                    hPT = track.PT
         try:
             self.iF_leadtrack = TE_C/hPT
         except:
@@ -193,9 +199,10 @@ class Jet_():
 
     def Maximum_deltaR(self):
         self.max_deltaR = 0
-        for track in self.Core_Tracks:
-            if track.deltaR >= self.max_deltaR:
-                self.max_deltaR = track.deltaR
+        for track in self.Tracks:
+            if track.CoreRegion:
+                if track.deltaR >= self.max_deltaR:
+                    self.max_deltaR = track.deltaR
 
 
 #    def impactP_leadTrack(self):
@@ -217,8 +224,9 @@ class Jet_():
     def F_IsoTracks(self):
         Iso_PT = 0
         All_PT = 0
-        for track in self.Iso_Tracks:
-            Iso_PT += track.PT
+        for track in self.Tracks:
+            if track.IsoRegion:
+                Iso_PT += track.PT
         for track in self.Tracks:
             All_PT += track.PT
         try:

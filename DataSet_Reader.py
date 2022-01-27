@@ -10,12 +10,13 @@ import numba
 from numba import jit, jit_module
 import os, os.path
 from tqdm import tqdm, trange
+from array import array
 
 gROOT.ProcessLine(
 """
     struct HL_vars {\
-    Int_t jet_entry;\
-    Int_t jet_index;\
+    UInt_t jet_entry;\
+    UInt_t jet_index;\
     Float_t jet_weight;\
     Float_t jet_PT;\
     Float_t jet_Eta;\
@@ -35,11 +36,16 @@ gROOT.ProcessLine(
 
 gROOT.ProcessLine(
 """
-    const Int_t kMaxTrack = 4;\
-    struct NewTrack {\
     Int_t nTrack;\
-    Int_t entry[kMaxTrack];\
-    Int_t index[kMaxTrack];\
+    Int_t nTower;\
+""")
+
+gROOT.ProcessLine(
+"""
+    const Int_t kMaxTrack = 500;\
+    struct NewTrack {\
+    UInt_t entry[kMaxTrack];\
+    UInt_t index[kMaxTrack];\
     Float_t P[kMaxTrack];\
     Float_t PT[kMaxTrack];\
     Float_t Eta[kMaxTrack];\
@@ -56,10 +62,9 @@ gROOT.ProcessLine(
 
 gROOT.ProcessLine(
 """
-    const Int_t kMaxTower = 4;\
+    const Int_t kMaxTower = 500;\
     struct NewTower {\
-    Int_t nTower;\
-    Int_t entry[kMaxTower];\
+    UInt_t entry[kMaxTower];\
     Float_t weight[kMaxTower];\
     Float_t E[kMaxTower];\
     Float_t ET[kMaxTower];\
@@ -77,7 +82,6 @@ gROOT.ProcessLine(
     Float_t deltaR[kMaxTower];\
 };"""
 )
-
 
 class Dataset:
 

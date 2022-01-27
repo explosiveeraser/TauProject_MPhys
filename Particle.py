@@ -13,10 +13,13 @@ from tqdm import tqdm, trange
 
 class Particle_():
 
-    def __init__(self, entry, evt, particle):
+    def __init__(self, entry, evt, particle, hists=True):
         self.entry = entry
         self.event = evt
-        self.particle_obj = particle
+        if hists:
+            self.particle_obj = particle
+        else:
+            self.particle_obj = None
         PID = particle.PID
         self.PID = PID
         if PID == 15 or PID == -15:

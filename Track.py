@@ -13,11 +13,14 @@ from tqdm import tqdm, trange
 
 class Track_():
 
-    def __init__(self, entry, idx, event, track_obj, track_particle):
+    def __init__(self, entry, idx, event, track_obj, track_particle, hists=True):
         self.entry = entry
         self.idx = idx
         self.event = event
-        self.track_obj = track_obj
+        if hists:
+            self.track_obj = track_obj
+        else:
+            self.track_obj = None
         self.P = track_obj.P
         self.PT = track_obj.PT
         self.Eta = track_obj.Eta
