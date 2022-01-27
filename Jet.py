@@ -16,7 +16,7 @@ from Tower import Tower_
 
 class Jet_():
 
-    def __init__(self, entry, idx, event, weight, jet_obj, particles, Event_Tracks, constituents):
+    def __init__(self, entry, idx, event, weight, jet_obj, particles, Event_Particles, Event_Tracks, Event_Towers,constituents):
         self.entry = entry
         self.idx = idx
         self.event = event
@@ -32,23 +32,34 @@ class Jet_():
         self.NNeutral = jet_obj.NNeutrals
         self.DR = math.sqrt((jet_obj.DeltaEta) **2 + (jet_obj.DeltaPhi) **2)
         self.MeanSqDR = jet_obj.MeanSqDeltaR
+        self.num_particles = 0
+        self.num_tracks = 0
+        self.num_towers = 0
         if self.PT > 10.0 and abs(self.Eta) < 2.5:
             self.TauCan_1Prong = True
             self.TauCan_3Prong = True
         else:
             self.TauCan_1Prong = False
             self.TauCan_3Prong = False
-        self.particles = particles
+    #Remove to avoid dc (double counting)
+        #self.particles = particles
         #self.TruthTau = jet_obj.TauTag
-        self.constituents = constituents
+    #Removed to avoid double counting
+        #self.constituents = constituents
         self.Tracks = []
         self.Towers = []
+        self.Particles = []
         self.Core_Tracks = []
         self.Iso_Tracks = []
         self.Core_Towers = []
         self.Iso_Towers = []
+        self.TruthTau = False
+        self.numTaus = 0
+        # self._Find_Tracks(Event_Tracks)
+        # self._Add_Towers()
+        self._Find_Particles(Event_Particles)
         self._Find_Tracks(Event_Tracks)
-        self._Add_Towers()
+        self._Find_Towers(Event_Towers)
         self.Regions_Tracks()
         self.Regions_Towers()
         self.Central_Energy_Fraction()
@@ -56,53 +67,84 @@ class Jet_():
         self.Maximum_deltaR()
 #        self.impactP_leadTrack()
         self.F_IsoTracks()
-        self.TruthTau = self._Contains_Tau(self.particles)
+
+
+    def _Find_Particles(self, evt_particles):
+        num_particles = len(evt_particles)
+        for idx in range(0, num_particles):
+            check_p = evt_particles[idx]
+            check_p.Jet_Association(self.Eta, self.Phi)
+            if check_p.deltaR <= 0.6:
+                self.Particles.append(check_p)
+                self.num_particles += 1
+                if check_p.PID == 15 or check_p == -15:
+                    self.TruthTau = True
+                    self.numTaus += 1
 
     def _Find_Tracks(self, evt_tracks):
         num_tracks = len(evt_tracks)
-        self.num_tracks = 0
         for idx in range(0, num_tracks):
-            check_particle = evt_tracks[idx].particle
-            check = self.particles.Contains(check_particle)
-            if check:
-                track = evt_tracks[idx]
-                self.Tracks.append(track)
-                self.Tracks[self.num_tracks].Jet_Association(self.Eta, self.Phi)
+            check_tr = evt_tracks[idx]
+            check_tr.Jet_Association(self.Eta, self.Phi)
+            if check_tr.deltaR <= 0.6:
+                self.Tracks.append(check_tr)
                 self.num_tracks += 1
 
-    def _Add_Towers(self):
-        num_const = len(self.constituents)
-        self.num_towers = 0
-        for idx in range(0, num_const):
-            const = self.constituents[idx]
-            if const.ClassName() == "Tower":
-                tower = Tower_(self.entry, self.event, self.weight, const)
-                self.Towers.append(tower)
-                self.Towers[self.num_towers].Jet_Association(self.Eta, self.Phi)
+    def _Find_Towers(self, evt_towers):
+        num_towers = len(evt_towers)
+        for idx in range(0, num_towers):
+            check_to = evt_towers[idx]
+            check_to.Jet_Association(self.Eta, self.Phi)
+            if check_to.deltaR <= 0.6:
+                self.Towers.append(check_to)
                 self.num_towers += 1
 
-    def _Contains_Tau(self, particles):
-        num1 = particles.GetEntries()
-        found_tau = False
-        for i in range(0, num1):
-            test = particles.At(i).PID
-            if test == 15 or test == -15:
-                print("True")
-                found_tau = True
-        for track in self.Tracks:
-            particle = track.particle
-            if particle.PID == 15 or particle.PID == -15:
-                found_tau = True
-                print("True")
-        for tower in self.Towers:
-            particles = tower.particles
-            num2 = particles.GetEntries()
-            for j in range(0, num2):
-                to_test = particles.At(j).PID
-                if to_test == 15 or to_test == -15:
-                    found_tau = True
-                    print("True")
-        return found_tau
+
+    # def _Find_Tracks(self, evt_tracks):
+    #     num_tracks = len(evt_tracks)
+    #     self.num_tracks = 0
+    #     for idx in range(0, num_tracks):
+    #         check_particle = evt_tracks[idx].particle
+    #         check = self.particles.Contains(check_particle)
+    #         if check:
+    #             track = evt_tracks[idx]
+    #             self.Tracks.append(track)
+    #             self.Tracks[self.num_tracks].Jet_Association(self.Eta, self.Phi)
+    #             self.num_tracks += 1
+
+    # def _Add_Towers(self):
+    #     num_const = len(self.constituents)
+    #     self.num_towers = 0
+    #     for idx in range(0, num_const):
+    #         const = self.constituents[idx]
+    #         if const.ClassName() == "Tower":
+    #             tower = Tower_(self.entry, self.event, self.weight, const)
+    #             self.Towers.append(tower)
+    #             self.Towers[self.num_towers].Jet_Association(self.Eta, self.Phi)
+    #             self.num_towers += 1
+
+    # def _Contains_Tau(self, particles):
+    #     num1 = particles.GetEntries()
+    #     found_tau = False
+    #     for i in range(0, num1):
+    #         test = particles.At(i).PID
+    #         if test == 15 or test == -15:
+    #             print("True")
+    #             found_tau = True
+    #     for track in self.Tracks:
+    #         particle = track.particle
+    #         if particle.PID == 15 or particle.PID == -15:
+    #             found_tau = True
+    #             print("True")
+    #     for tower in self.Towers:
+    #         particles = tower.particles
+    #         num2 = particles.GetEntries()
+    #         for j in range(0, num2):
+    #             to_test = particles.At(j).PID
+    #             if to_test == 15 or to_test == -15:
+    #                 found_tau = True
+    #                 print("True")
+    #     return found_tau
 
     def Regions_Tracks(self):
         num = len(self.Tracks)

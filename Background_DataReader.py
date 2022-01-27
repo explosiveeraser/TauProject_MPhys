@@ -14,6 +14,7 @@ from DataSet_Reader import Dataset
 from Jet import Jet_
 from Track import Track_
 from Tower import Tower_
+from Particle import Particle_
 
 ROOT.gSystem.Load("/home/a/Delphes-3.5.0/libDelphes.so")
 
@@ -48,7 +49,7 @@ class Background(Dataset):
             self._leaves[leaf] = temp.GetTypeName()
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
-        self._nev = self._reader.GetEntries() -49900
+        self._nev = self._reader.GetEntries()
         for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
             self._branchReader[branch] = self._reader.UseBranch(branch)
             self.num_of_object[branch] = 0
@@ -67,6 +68,10 @@ class Background(Dataset):
             num_tracks = self._branchReader["Track"].GetEntries()
             num_towers = self._branchReader["Tower"].GetEntries()
             num_particles = self._branchReader["Particle"].GetEntries()
+            for ldx in range(0, num_particles):
+                particle = self._branchReader["Particle"].At(ldx)
+                evt_particle = Particle_(entry, evt, particle)
+                particles.append(evt_particle)
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
                 evt_track = Track_(entry, jdx, evt, track, track.Particle.GetObject())
@@ -78,7 +83,7 @@ class Background(Dataset):
             for idx in range(0, num_Jets):
                 jet = self._branchReader["Jet"].At(idx)
                 self.num_of_object["Jet"] += 1
-                new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, tracks, jet.Constituents)
+                new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents)
                 self.JetArray.append(new_jet)
                 self.Fill_Histograms("Jet", jet, weight, new_jet)
                 if new_jet.TruthTau:
@@ -91,6 +96,10 @@ class Background(Dataset):
                     self.Fill_Histograms("Tower", Tower.tower_obj, weight, Tower)
                     if new_jet.TruthTau:
                         self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight, Tower)
+                for Particle in new_jet.Particles:
+                    self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
+                    if Particle.PID == 15 or Particle.PID == -15:
+                        self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
         for branch in {"GenMissingET", "MissingET", "ScalarET", "Particle"}:
                 if branch in list(self.Histograms.keys()):
                     num = self._branchReader[branch].GetEntriesFast()

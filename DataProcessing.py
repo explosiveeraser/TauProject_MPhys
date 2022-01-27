@@ -21,8 +21,8 @@ class DataProcessing():
     def __init__(self, SigDir, BackDir):
         self.signal = Signal(SigDir)
         self.background = Background(BackDir)
-        self.signal.write_taucan_ttree("signal_tree")
-        self.background.write_taucan_ttree("background_tree")
+#        self.signal.write_taucan_ttree("signal_tree")
+ #       self.background.write_taucan_ttree("background_tree")
         self.canvases = {}
         self.legend = {}
         self.Hist_started = False
@@ -67,9 +67,9 @@ class DataProcessing():
                     self.text.DrawTextNDC(.0, .0, "Kolmogorov Test: {}".format(k_test))
                 self.legend["legend_{}_{}".format(c, j)] = ROOT.TLegend(0.05, 0.85, 0.2, 0.95)
                 self.legend["legend_{}_{}".format(c, j)].SetHeader("Histogram Colors:")
-                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.background.Histograms[branch][leaf],
+                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.signal.Histograms[branch][leaf],
                                                              "Non-Tau-Tagged Signal Data", "L")
-                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.background.Tau_Histograms[branch][leaf],
+                self.legend["legend_{}_{}".format(c, j)].AddEntry(self.signal.Tau_Histograms[branch][leaf],
                                                              "Tau-Tagged Signal Data", "L")
                 self.legend["legend_{}_{}".format(c, j)].Draw()
                 j += 1

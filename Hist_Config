@@ -68,3 +68,4 @@ Track.deltaEta:-2.6,2.6;F;40;2
 Track.deltaPhi:-3.2,3.2;F;40;2
 Track.deltaR:0,0.65;F;40;2
 Particle.PID:-18,18;F;36;1
+Jet.TruthTau:0,2;D;3;2
