@@ -39,7 +39,6 @@ class Jet_():
             self.TauCan_1Prong = False
             self.TauCan_3Prong = False
         self.particles = particles
-        self.TruthTau = self._Contains_Tau(self.particles)
         #self.TruthTau = jet_obj.TauTag
         self.constituents = constituents
         self.Tracks = []
@@ -57,6 +56,7 @@ class Jet_():
         self.Maximum_deltaR()
 #        self.impactP_leadTrack()
         self.F_IsoTracks()
+        self.TruthTau = self._Contains_Tau(self.particles)
 
     def _Find_Tracks(self, evt_tracks):
         num_tracks = len(evt_tracks)
@@ -89,6 +89,19 @@ class Jet_():
             if test == 15 or test == -15:
                 print("True")
                 found_tau = True
+        for track in self.Tracks:
+            particle = track.particle
+            if particle.PID == 15 or particle.PID == -15:
+                found_tau = True
+                print("True")
+        for tower in self.Towers:
+            particles = tower.particles
+            num2 = particles.GetEntries()
+            for j in range(0, num2):
+                to_test = particles.At(j).PID
+                if to_test == 15 or to_test == -15:
+                    found_tau = True
+                    print("True")
         return found_tau
 
     def Regions_Tracks(self):

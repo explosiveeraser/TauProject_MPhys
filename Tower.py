@@ -18,6 +18,7 @@ class Tower_():
         self.event = evt
         self.weight = weight
         self.tower_obj = tower
+        self.particles = tower.Particles
         self.E = tower.E
         self.ET = tower.ET
         self.Eta = tower.Eta

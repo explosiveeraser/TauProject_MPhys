@@ -12,61 +12,69 @@ import os, os.path
 from tqdm import tqdm, trange
 
 gROOT.ProcessLine(
-"""struct HL_vars {\
-    Int_t entry;\
-    Int_t index;\
-    Float_t weight;\
-    Float_t PT;\
-    Float_t Eta;\
-    Float_t Phi;\
-    Float_t deltaEta;\
-    Float_t deltaPhi;\
-    Float_t charge;\
-    Float_t NCharged;\
-    Float_t NNeutral;\
-    Float_t deltaR;\
-    Float_t f_cent;\
-    Float_t iF_leadtrack;\
-    Float_t max_deltaR;\
-    Float_t Ftrack_Iso;\
+"""
+    struct HL_vars {\
+    Int_t jet_entry;\
+    Int_t jet_index;\
+    Float_t jet_weight;\
+    Float_t jet_PT;\
+    Float_t jet_Eta;\
+    Float_t jet_Phi;\
+    Float_t jet_deltaEta;\
+    Float_t jet_deltaPhi;\
+    Float_t jet_charge;\
+    Float_t jet_NCharged;\
+    Float_t jet_NNeutral;\
+    Float_t jet_deltaR;\
+    Float_t jet_f_cent;\
+    Float_t jet_iF_leadtrack;\
+    Float_t jet_max_deltaR;\
+    Float_t jet_Ftrack_Iso;\
+    };\
+""")
+
+gROOT.ProcessLine(
+"""
+    const Int_t kMaxTrack = 500;\
+    struct NewTrack {\
+    Int_t nTrack;\
+    Int_t entry[kMaxTrack];\
+    Int_t index[kMaxTrack];\
+    Float_t P[kMaxTrack];\
+    Float_t PT[kMaxTrack];\
+    Float_t Eta[kMaxTrack];\
+    Float_t Phi[kMaxTrack];\
+    Float_t L[kMaxTrack];\
+    Float_t D0[kMaxTrack];\
+    Float_t DZ[kMaxTrack];\
+    Float_t ErrorD0[kMaxTrack];\
+    Float_t ErrorDZ[kMaxTrack];\
+    Float_t deltaEta[kMaxTrack];\
+    Float_t deltaPhi[kMaxTrack];\
+    Float_t deltaR[kMaxTrack];\
 };""")
 
 gROOT.ProcessLine(
-"""struct NewTrack {\
-    Int_t entry;\
-    Int_t index;\
-    Float_t P;\
-    Float_t PT;\
-    Float_t Eta;\
-    Float_t Phi;\
-    Float_t L;\
-    Float_t D0;\
-    Float_t DZ;\
-    Float_t ErrorD0;\
-    Float_t ErrorDZ;\
-    Float_t deltaEta;\
-    Float_t deltaPhi;\
-    Float_t deltaR;\
-};""")
-
-gROOT.ProcessLine(
-"""struct NewTower {\
-    Int_t entry;\
-    Float_t weight;\
-    Float_t E;\
-    Float_t ET;\
-    Float_t Eta;\
-    Float_t Phi;\
-    Float_t Edges0;\
-    Float_t Edges1;\
-    Float_t Edges2;\
-    Float_t Edges3;\
-    Float_t Eem;\
-    Float_t Ehad;\
-    Float_t T;\
-    Float_t deltaEta;\
-    Float_t deltaPhi;\
-    Float_t deltaR;\
+"""
+    const Int_t kMaxTower = 500;\
+    struct NewTower {\
+    Int_t nTower;\
+    Int_t entry[kMaxTower];\
+    Float_t weight[kMaxTower];\
+    Float_t E[kMaxTower];\
+    Float_t ET[kMaxTower];\
+    Float_t Eta[kMaxTower];\
+    Float_t Phi[kMaxTower];\
+    Float_t Edges0[kMaxTower];\
+    Float_t Edges1[kMaxTower];\
+    Float_t Edges2[kMaxTower];\
+    Float_t Edges3[kMaxTower];\
+    Float_t Eem[kMaxTower];\
+    Float_t Ehad[kMaxTower];\
+    Float_t T[kMaxTower];\
+    Float_t deltaEta[kMaxTower];\
+    Float_t deltaPhi[kMaxTower];\
+    Float_t deltaR[kMaxTower];\
 };"""
 )
 
