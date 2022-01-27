@@ -62,14 +62,19 @@ class Background(Dataset):
             num_Jets = self._branchReader["Jet"].GetEntries()
             self.Tau_Tagger.append([])
             tracks = []
+            towers = []
+            particles = []
             num_tracks = self._branchReader["Track"].GetEntries()
             num_towers = self._branchReader["Tower"].GetEntries()
+            num_particles = self._branchReader["Particle"].GetEntries()
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
                 evt_track = Track_(entry, jdx, evt, track, track.Particle.GetObject())
                 tracks.append(evt_track)
             for kdx in range(0, num_towers):
                 tower = self._branchReader["Tower"].At(kdx)
+                evt_tower = Tower_(entry, evt, weight, tower)
+                towers.append(evt_tower)
             for idx in range(0, num_Jets):
                 jet = self._branchReader["Jet"].At(idx)
                 self.num_of_object["Jet"] += 1
@@ -128,7 +133,7 @@ class Background(Dataset):
                     n_to = len(jet.Towers)
                     track.nTrack = n_tr
                     tower.nTower = n_to
-                    for idx in range(0, n_tr):
+                    for idx in range(0, 4):
                         con_track = jet.Tracks[idx]
                         track.entry[idx] = con_track.entry
                         track.index[idx] = con_track.idx
@@ -144,7 +149,7 @@ class Background(Dataset):
                         track.deltaEta[idx] = con_track.deltaEta
                         track.deltaPhi[idx] = con_track.deltaPhi
                         track.deltaR[idx] = con_track.deltaR
-                    for jdx in range(0, n_to):
+                    for jdx in range(0, 4):
                         con_tower = jet.Towers[jdx]
                         tower.entry[jdx] = con_tower.entry
                         tower.weight[jdx] = con_tower.weight

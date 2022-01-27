@@ -35,7 +35,7 @@ gROOT.ProcessLine(
 
 gROOT.ProcessLine(
 """
-    const Int_t kMaxTrack = 500;\
+    const Int_t kMaxTrack = 4;\
     struct NewTrack {\
     Int_t nTrack;\
     Int_t entry[kMaxTrack];\
@@ -56,7 +56,7 @@ gROOT.ProcessLine(
 
 gROOT.ProcessLine(
 """
-    const Int_t kMaxTower = 500;\
+    const Int_t kMaxTower = 4;\
     struct NewTower {\
     Int_t nTower;\
     Int_t entry[kMaxTower];\
