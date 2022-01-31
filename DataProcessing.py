@@ -22,7 +22,7 @@ class DataProcessing():
         self.signal = Signal(SigDir, print_hist=False)
         self.background = Background(BackDir, print_hist=False)
         self.signal.write_taucan_ttree("signal_tree")
-        self.background.write_taucan_ttree("background_tree")
+        #self.background.write_taucan_ttree("background_tree")
         self.canvases = {}
         self.legend = {}
         self.Hist_started = False
