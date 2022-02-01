@@ -21,27 +21,115 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
-
-TMVA.Tools.Instance()
-TMVA.PyMethodBase.PyInitialize()
+from tqdm import tqdm, trange
 
 output = TFile.Open("RNN_1-Prong.root", "RECREATE")
-factory = TMVA.Factory("TMVAClassification", output, '!V:!Silent:Color:DrawProgressBar:Transformations=D,G:AnalysisType=multiclass')
-
-
 
 
 Signal_File = TFile.Open("../NewTTrees/signal_tree_1-Prong.root")
 Background_File = TFile.Open("../NewTTrees/background_tree_1-Prong.root")
 
-Signal_Tree = Signal_File.Get('signal_tree')
-Background_Tree = Background_File.Get('background_tree;6')
+Signal_Tree = Signal_File.Get('signal_tree;2')
+Background_Tree = Background_File.Get('background_tree;9')
 
-for Sjet in Signal_Tree:
-    pt = getattr(Sjet, 'Track.PT')
-    print(pt)
+back_numEntries = Background_Tree.GetEntries()
+back_jet_array = np.array([0, 0., 0., 0., 0., 0., 0., 0, 0, 0, 0., 0., 0., 0.]*back_numEntries)
+back_track_array = np.array([[], [], [], [], [], [], [], [], []]*back_numEntries)
+back_tower_array = np.array([[], [], [], [], [], [], [], [], [], [], [], [], [], [], []]*back_numEntries)
+
+sig_numEntries = Signal_Tree.GetEntries()
+sig_jet_array = []
+sig_track_array = []
+sig_tower_array = []
+
+# NUMPY INPUTS:
+# () - Single Value
+# [] - Array of Values
+# JET_ARRAY: ['(index)',(PT),(Eta),(Phi),(deltaEta),(deltaPhi),(charge),(NCharged),(NNeutral),(deltaR),(f_cent),
+# (iF_leadtrack),(max_deltaR),(Ftrack_Iso)]
+# TRACK_ARRAY: ['[index]',[P], [PT], [L], [D0], [DZ], [e], [e], [deltaEta], [deltaPhi], [deltaR]]
+# TOWER_ARRAY: ['[index]',[E], [ET], [Eta], [Phi], [Edges0], [Edges1], [Edges2], [Edges3], [Eem], [Ehad], [T],
+# [deltaEta], [deltaPhi], [deltaR]]
+
+jet_index = 0
+track_index = 0
+tower_index = 0
 
 
+#loop to read tree and begin processing input (sorted tracks and towers)
+for entry in tqdm(Signal_Tree):
+    sig_jet_array.append([entry.jet_PT, entry.jet_Eta, entry.jet_Phi, entry.jet_deltaEta, entry.jet_deltaPhi,
+                          entry.jet_charge, entry.jet_NCharged, entry.jet_NNeutral, entry.jet_deltaR, entry.jet_f_cent,
+                          entry.jet_iF_leadtrack, entry.jet_max_deltaR, entry.jet_Ftrack_Iso])
+    track_index = 0
+    tower_index = 0
+    nTrack = int(entry.nTrack)
+    nTower = int(entry.nTower)
+    # TRACK_ARRAY: ['[index]',[P], [PT], [L], [D0], [DZ], [e], [e], [deltaEta], [deltaPhi], [deltaR]]
+    tr_p = []
+    tr_pt = []
+    tr_l = []
+    tr_d0 = []
+    tr_dz = []
+    tr_delEta = []
+    tr_delPhi = []
+    tr_delR = []
+    # TOWER_ARRAY: ['[index]',[E], [ET], [Eta], [Phi], [Edges0], [Edges1], [Edges2], [Edges3], [Eem], [Ehad], [T],
+    # [deltaEta], [deltaPhi], [deltaR]]
+    to_e = []
+    to_et = []
+    to_eta = []
+    to_phi = []
+    to_ed0 = []
+    to_ed1 = []
+    to_ed2 = []
+    to_ed3 = []
+    to_eem = []
+    to_ehad = []
+    to_t = []
+    to_deleta = []
+    to_delphi = []
+    to_delr = []
+    for t in range(0, nTrack):
+        tr_pt.append(entry.track_PT[t])
+    index_sorted_tracks = sorted(range(len(tr_pt)), key=lambda k: tr_pt[k], reverse=True)
+    for t in range(0, nTower):
+        to_et.append(entry.tower_ET[t])
+    index_sorted_towers = sorted(range(len(to_et)), key=lambda k: to_et[k], reverse=True)
+    for idx in index_sorted_tracks:
+        tr_p.append(entry.track_P[idx])
+        tr_pt.append(entry.track_PT[idx])
+        tr_l.append(entry.track_L[idx])
+        tr_d0.append(entry.track_D0[idx])
+        tr_dz.append(entry.track_DZ[idx])
+        tr_delEta.append(entry.track_deltaEta[idx])
+        tr_delPhi.append(entry.track_deltaPhi[idx])
+        tr_delR.append(entry.track_deltaR[idx])
+        track_index += 1
+    for jdx in index_sorted_towers:
+        to_e.append(entry.tower_E[jdx])
+        to_et.append(entry.tower_ET[jdx])
+        to_eta.append(entry.tower_Eta[jdx])
+        to_phi.append(entry.tower_Phi[jdx])
+        to_ed0.append(entry.tower_Edges0[jdx])
+        to_ed1.append(entry.tower_Edges1[jdx])
+        to_ed2.append(entry.tower_Edges2[jdx])
+        to_ed3.append(entry.tower_Edges3[jdx])
+        to_eem.append(entry.tower_Eem[jdx])
+        to_ehad.append(entry.tower_Ehad[jdx])
+        to_t.append(entry.tower_T[jdx])
+        to_deleta.append(entry.tower_deltaEta[jdx])
+        to_delphi.append(entry.tower_deltaPhi[jdx])
+        to_delr.append(entry.tower_deltaR[jdx])
+        tower_index += 1
+    sig_track_array.append([tr_p, tr_pt, tr_l, tr_d0, tr_dz, tr_delEta, tr_delPhi, tr_delR])
+    sig_tower_array.append([to_e, to_et, to_eta, to_phi, to_ed0, to_ed1, to_ed2, to_ed3, to_eem, to_ehad, to_t, to_deleta, to_delphi, to_delr])
+    jet_index += 1
+
+#Data preprocessing: Normalizing the data and inserting timesteps for tracks and towers
+#
+#TO FILL
+#
 
 #HL Layers
 HL_input = Input(shape=(13,))

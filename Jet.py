@@ -1,6 +1,7 @@
 import array
 import gc
 import math
+import random
 
 import numpy as np
 import ROOT
@@ -76,20 +77,29 @@ class Jet_():
         num_particles = len(evt_particles)
         for idx in range(0, num_particles):
             check_p = evt_particles[idx]
-            check_p.Jet_Association(self.Eta, self.Phi)
-            if check_p.deltaR <= 0.6:
+            if self.check_if_con(check_p.Eta, check_p.Phi):
+                check_p.Jet_Association(self.Eta, self.Phi)
                 self.Particles.append(check_p)
                 self.num_particles += 1
                 if check_p.PID == 15 or check_p == -15:
                     self.TruthTau = True
                     self.numTaus += 1
 
+    def check_if_con(self, con_eta, con_phi):
+        deltaEta = self.Eta - con_eta
+        deltaPhi = self.Phi - con_phi
+        deltaR = math.sqrt((deltaEta)**2+(deltaPhi)**2)
+        if deltaR <= 0.6:
+            return True
+        else:
+            return False
+
     def _Find_Tracks(self, evt_tracks):
         num_tracks = len(evt_tracks)
         for idx in range(0, num_tracks):
             check_tr = evt_tracks[idx]
-            check_tr.Jet_Association(self.Eta, self.Phi)
-            if check_tr.deltaR <= 0.6:
+            if self.check_if_con(check_tr.Eta, check_tr.Phi):
+                check_tr.Jet_Association(self.Eta, self.Phi)
                 self.Tracks.append(check_tr)
                 self.num_tracks += 1
 
@@ -97,8 +107,8 @@ class Jet_():
         num_towers = len(evt_towers)
         for idx in range(0, num_towers):
             check_to = evt_towers[idx]
-            check_to.Jet_Association(self.Eta, self.Phi)
-            if check_to.deltaR <= 0.6:
+            if self.check_if_con(check_to.Eta, check_to.Phi):
+                check_to.Jet_Association(self.Eta, self.Phi)
                 self.Towers.append(check_to)
                 self.num_towers += 1
 

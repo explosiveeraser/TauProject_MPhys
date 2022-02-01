@@ -9,6 +9,7 @@ from ROOT import gROOT
 import numba
 from numba import jit, jit_module
 import os, os.path
+from array import array
 from tqdm import tqdm, trange
 from DataSet_Reader import Dataset
 from Jet import Jet_
@@ -50,7 +51,7 @@ class Background(Dataset):
             self._leaves[leaf] = temp.GetTypeName()
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
-        self._nev = self._reader.GetEntries() -49999
+        self._nev = self._reader.GetEntries()
         for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
             self._branchReader[branch] = self._reader.UseBranch(branch)
             self.num_of_object[branch] = 0
@@ -116,77 +117,172 @@ class Background(Dataset):
 
     def write_taucan_ttree(self, fname):
         for prong in {'1-Prong', '3-Prong'}:
-            file = ROOT.TFile("NewTTrees/" + str(fname) + "_" + prong + ".root", "RECREATE")
-            tree = ROOT.TTree(fname, str(fname + "_" + prong + " Tree"))
-            hlvars = ROOT.HL_vars()
-            nTrack = ROOT.nTrack
-            nTower = ROOT.nTower
-            track = ROOT.NewTrack()
-            tower = ROOT.NewTower()
-            tree.Branch("HL_vars", hlvars, 'jet_entry/F:jet_index/F:jet_weight/F:jet_PT/F:jet_Eta/F:jet_Phi/F:jet_deltaEta/F:jet_deltaPhi/F:jet_charge/F:jet_NCharged/F:jet_NNeutral/F:jet_deltaR/F:jet_f_cent/F:jet_iF_leadtrack/F:jet_Ftrack_Iso/F')
-            tree.Branch("nTrack", nTrack, 'nTrack/I')
-            tree.Branch("nTower", nTower, 'nTower/I')
-            BR_track = tree.Branch('Track', track,
-                                   'entry[nTrack]/F:index[nTrack]/F:P[nTrack]/F:PT[nTrack]/F:Eta[nTrack]/F:Phi[nTrack]/F:L[nTrack]/F:D0[nTrack]/F:DZ[nTrack]/F:ErrorD0[nTrack]/F:ErrorDZ[nTrack]/F:deltaEta[nTrack]/F:deltaPhi[nTrack]/F:deltaR[nTrack]/F')
-            BR_tower = tree.Branch('Tower', tower,
-                                   'entry[nTower]/F:weight[nTower]/F:E[nTower]/F:ET[nTower]/F:Eta[nTower]/F:Phi[nTower]/F:Edges0[nTower]/F:Edges1[nTower]/F:Edges2[nTower]/F:Edges3[nTower]/F:Eem[nTower]/F:Ehad[nTower]/F:T[nTower]/F:deltaEta[nTower]/F:deltaPhi[nTower]/F:deltaR[nTower]/F')
+            tot_ntr = 0
+            tot_nto = 0
+            name = fname+prong
+            MaxNtrack = 500
+            MaxNtower = 500
+            jet_entry = array('i', [0])
+            jet_index = array('i', [0])
+            jet_weight = array('f', [0.])
+            jet_PT = array('f', [0.])
+            jet_Eta = array('f', [0.])
+            jet_Phi = array('f', [0.])
+            jet_deltaEta = array('f', [0.])
+            jet_deltaPhi = array('f', [0.])
+            jet_charge = array('f', [0.])
+            jet_NCharged = array('f', [0.])
+            jet_NNeutral = array('f', [0.])
+            jet_deltaR = array('f', [0.])
+            jet_f_cent = array('f', [0.])
+            jet_iF_leadtrack = array('f', [0.])
+            jet_max_deltaR = array('f', [0.])
+            jet_Ftrack_Iso = array('f', [0.])
+            nTrack = array('i', [0])
+            nTower = array('i', [0])
+            track_entry = array('i', MaxNtrack*[0])
+            track_PT = array('f', MaxNtrack*[0.])
+            track_Eta = array('f', MaxNtrack*[0.])
+            track_index = array('i', MaxNtrack*[0])
+            track_P = array('f', MaxNtrack*[0.])
+            track_Phi = array('f', MaxNtrack*[0.])
+            track_L = array('f', MaxNtrack*[0.])
+            track_D0 = array('f', MaxNtrack*[0.])
+            track_DZ = array('f', MaxNtrack*[0.])
+            track_ErrorD0 = array('f', MaxNtrack*[0.])
+            track_ErrorDZ = array('f', MaxNtrack*[0.])
+            track_deltaEta = array('f', MaxNtrack*[0.])
+            track_deltaPhi = array('f', MaxNtrack*[0.])
+            track_deltaR = array('f', MaxNtrack*[0.])
+            tower_entry = array('i', MaxNtower*[0])
+            tower_ET = array('f', MaxNtower*[0.])
+            tower_Eta = array('f', MaxNtower*[0.])
+            tower_weight = array('f', MaxNtower*[0.])
+            tower_E = array('f', MaxNtower*[0.])
+            tower_Phi = array('f', MaxNtower*[0.])
+            tower_Edges0 = array('f', MaxNtower*[0.])
+            tower_Edges1 = array('f', MaxNtower*[0.])
+            tower_Edges2 = array('f', MaxNtower*[0.])
+            tower_Edges3 = array('f', MaxNtower*[0.])
+            tower_Eem = array('f', MaxNtower*[0.])
+            tower_Ehad = array('f', MaxNtower*[0.])
+            tower_T = array('f', MaxNtower*[0.])
+            tower_deltaEta = array('f', MaxNtower*[0.])
+            tower_deltaPhi = array('f', MaxNtower*[0.])
+            tower_deltaR = array('f', MaxNtower*[0.])
+            file = ROOT.TFile("NewTTrees/"+str(fname)+"_"+prong+".root", "RECREATE")
+            tree = ROOT.TTree(fname, str(fname+"_"+prong+" Tree"))
+            tree.Branch("jet_entry", jet_entry, "jet_entry/I")
+            tree.Branch("jet_index", jet_index, "jet_index/I")
+            tree.Branch("jet_weight", jet_weight, "jet_weight/F")
+            tree.Branch("jet_PT", jet_PT, "jet_PT/F")
+            tree.Branch("jet_Eta", jet_Eta, "jet_Eta/F")
+            tree.Branch("jet_Phi", jet_Phi, "jet_Phi/F")
+            tree.Branch("jet_deltaEta", jet_deltaEta, "jet_deltaEta/F")
+            tree.Branch("jet_deltaPhi", jet_deltaPhi, "jet_deltaPhi/F")
+            tree.Branch("jet_deltaR", jet_deltaR, "jet_deltaR/F")
+            tree.Branch("jet_charge", jet_charge, "jet_charge/F")
+            tree.Branch("jet_NCharged", jet_NCharged, "jet_NCharged/F")
+            tree.Branch("jet_NNeutral", jet_NNeutral, "jet_NNeutral/F")
+            tree.Branch("jet_deltaR", jet_deltaR, "jet_deltaR/F")
+            tree.Branch("jet_f_cent", jet_f_cent, "jet_f_cent/F")
+            tree.Branch("jet_iF_leadtrack", jet_iF_leadtrack, "jet_iF_leadtrack/F")
+            tree.Branch("jet_max_deltaR", jet_max_deltaR, "jet_max_deltaR/F")
+            tree.Branch("jet_Ftrack_Iso", jet_Ftrack_Iso, "jet_Ftrack_Iso/F")
+            tree.Branch("nTrack", nTrack, "nTrack/I")
+            tree.Branch("nTower", nTower, "nTower/I")
+            tree.Branch("track_entry", track_entry, "track_entry[nTrack]/I")
+            tree.Branch("track_index", track_index, "track_index[nTrack]/I")
+            tree.Branch("track_P", track_P, "track_P[nTrack]/F")
+            tree.Branch("track_PT", track_PT, "track_PT[nTrack]/F")
+            tree.Branch("track_Eta", track_Eta, "track_Eta[nTrack]/F")
+            tree.Branch("track_Phi", track_Phi, "track_Phi[nTrack]/F")
+            tree.Branch("track_L", track_L, "track_L[nTrack]/F")
+            tree.Branch("track_D0", track_D0, "track_D0[nTrack]/F")
+            tree.Branch("track_DZ", track_DZ, "track_DZ[nTrack]/F")
+            tree.Branch("track_ErrorD0", track_ErrorD0, "track_ErrorD0[nTrack]/F")
+            tree.Branch("track_ErrorDZ", track_ErrorDZ, "track_ErrorDZ[nTrack]/F")
+            tree.Branch("track_deltaEta", track_deltaEta, "track_deltaEta[nTrack]/F")
+            tree.Branch("track_deltaPhi", track_deltaPhi, "track_deltaPhi[nTrack]/F")
+            tree.Branch("track_deltaR", track_deltaR, "track_deltaR[nTrack]/F")
+            tree.Branch("tower_entry", tower_entry, "tower_entry[nTower]/I")
+            tree.Branch("tower_weight", tower_weight, "tower_weight[nTower]/F")
+            tree.Branch("tower_E", tower_E, "tower_E[nTower]/F")
+            tree.Branch("tower_ET", tower_ET, "tower_ET[nTower]/F")
+            tree.Branch("tower_Eta", tower_Eta, "tower_Eta[nTower]/F")
+            tree.Branch("tower_Phi", tower_Phi, "tower_Phi[nTower]/F")
+            tree.Branch("tower_Edges0", tower_Edges0, "tower_Edges0[nTower]/F")
+            tree.Branch("tower_Edges1", tower_Edges1, "tower_Edges1[nTower]/F")
+            tree.Branch("tower_Edges2", tower_Edges2, "tower_Edges2[nTower]/F")
+            tree.Branch("tower_Edges3", tower_Edges3, "tower_Edges3[nTower]/F")
+            tree.Branch("tower_Eem", tower_Eem, "tower_Eem[nTower]/F")
+            tree.Branch("tower_Ehad", tower_Ehad, "tower_Ehad[nTower]/F")
+            tree.Branch("tower_T", tower_T, "tower_T[nTower]/F")
+            tree.Branch("tower_deltaEta", tower_deltaEta, "tower_deltaEta[nTower]/F")
+            tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
+            tree.Branch("tower_deltaR", tower_deltaR, "tower_deltaR[nTower]/F")
             for jet in tqdm(self.JetArray):
-                if jet.PT >= 20.0 and jet.Eta <= 2.5 and len(jet.Tracks) >= 1 and len(jet.Towers) >= 1:
-                    hlvars.jet_entry = int(jet.entry)
-                    print(jet.idx)
-                    hlvars.jet_index = int(jet.idx)
-                    hlvars.jet_weight = jet.weight
-                    hlvars.jet_PT = jet.PT
-                    hlvars.jet_Eta = jet.Eta
-                    hlvars.jet_Phi = jet.Phi
-                    hlvars.jet_deltaEta = jet.deltaEta
-                    hlvars.jet_deltaPhi = jet.deltaPhi
-                    hlvars.jet_charge = jet.charge
-                    hlvars.jet_NCharged = jet.NCharged
-                    hlvars.jet_NNeutral = jet.NNeutral
-                    hlvars.jet_deltaR = jet.DR
-                    hlvars.jet_f_cent = jet.f_cent
-                    hlvars.jet_iF_leadtrack = jet.iF_leadtrack
-                    hlvars.jet_max_deltaR = jet.max_deltaR
-                    hlvars.jet_Ftrack_Iso = jet.Ftrack_Iso
+                if jet.PT >= 10.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(jet.Towers) >= 1:
+                    jet_entry[0] = int(jet.entry)
+                    jet_index[0] = int(jet.idx)
+                    jet_weight[0] = jet.weight
+                    jet_PT[0] = jet.PT
+                    jet_Eta[0] = jet.Eta
+                    jet_Phi[0] = jet.Phi
+                    jet_deltaEta[0] = jet.deltaEta
+                    jet_deltaPhi[0] = jet.deltaPhi
+                    jet_charge[0] = jet.charge
+                    jet_NCharged[0] = jet.NCharged
+                    jet_NNeutral[0] = jet.NNeutral
+                    jet_deltaR[0] = jet.DR
+                    jet_f_cent[0] = jet.f_cent
+                    jet_iF_leadtrack[0] = jet.iF_leadtrack
+                    jet_max_deltaR[0] = jet.max_deltaR
+                    jet_iF_leadtrack[0] = jet.iF_leadtrack
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
-                    track.nTrack = int(n_tr)
-                    tower.nTower = int(n_to)
+                    nTrack[0] = n_tr
+                    nTower[0] = n_to
+                    tot_ntr += n_tr
+                    tot_nto += n_to
                     for idx in range(0, n_tr):
                         con_track = jet.Tracks[idx]
-                        track.entry[idx] = int(con_track.entry)
-                        track.index[idx] = int(con_track.idx)
-                        track.P[idx] = con_track.P
-                        track.PT[idx] = con_track.PT
-                        track.Eta[idx] = con_track.Eta
-                        track.Phi[idx] = con_track.Phi
-                        track.L[idx] = con_track.L
-                        track.D0[idx] = con_track.D0
-                        track.DZ[idx] = con_track.DZ
-                        track.ErrorD0[idx] = con_track.ErrorD0
-                        track.ErrorDZ[idx] = con_track.ErrorDZ
-                        track.deltaEta[idx] = con_track.deltaEta
-                        track.deltaPhi[idx] = con_track.deltaPhi
-                        track.deltaR[idx] = con_track.deltaR
+                        track_entry[idx] = 3#con_track.entry
+                        track_index[idx] = con_track.idx
+                        track_P[idx] = con_track.P
+                        track_PT[idx] = con_track.PT
+                        track_Eta[idx] = con_track.Eta
+                        track_Phi[idx] = con_track.Phi
+                        track_L[idx] = con_track.L
+                        track_D0[idx] = con_track.D0
+                        track_DZ[idx] = con_track.DZ
+                        track_ErrorD0[idx] = con_track.ErrorD0
+                        track_ErrorDZ[idx] = con_track.ErrorDZ
+                        track_deltaEta[idx] = con_track.deltaEta
+                        track_deltaPhi[idx] = con_track.deltaPhi
+                        track_deltaR[idx] = con_track.deltaR
                     for jdx in range(0, n_to):
                         con_tower = jet.Towers[jdx]
-                        tower.entry[jdx]= int(con_tower.entry)
-                        tower.weight[jdx] = con_tower.weight
-                        tower.E[jdx] = con_tower.E
-                        tower.ET[jdx] = con_tower.ET
-                        tower.Eta[jdx] = con_tower.Eta
-                        tower.Phi[jdx] = con_tower.Phi
-                        tower.Edges0[jdx] = con_tower.Edges[0]
-                        tower.Edges1[jdx] = con_tower.Edges[1]
-                        tower.Edges2[jdx] = con_tower.Edges[2]
-                        tower.Edges3[jdx] = con_tower.Edges[3]
-                        tower.Eem[jdx] = con_tower.Eem
-                        tower.Ehad[jdx] = con_tower.Ehad
-                        tower.T[jdx] = con_tower.T
-                        tower.deltaEta[jdx] = con_tower.deltaEta
-                        tower.deltaPhi[jdx] = con_tower.deltaPhi
-                        tower.deltaR[jdx] = con_tower.deltaR
+                        tower_entry[jdx] = 5#con_tower.entry
+                        tower_weight[jdx] = con_tower.weight
+                        tower_E[jdx] = con_tower.E
+                        tower_ET[jdx] = con_tower.ET
+                        tower_Eta[jdx] = con_tower.Eta
+                        tower_Phi[jdx] = con_tower.Phi
+                        tower_Edges0[jdx] = con_tower.Edges[0]
+                        tower_Edges1[jdx] = con_tower.Edges[1]
+                        tower_Edges2[jdx] = con_tower.Edges[2]
+                        tower_Edges3[jdx] = con_tower.Edges[3]
+                        tower_Eem[jdx] = con_tower.Eem
+                        tower_Ehad[jdx] = con_tower.Ehad
+                        tower_T[jdx] = con_tower.T
+                        tower_deltaEta[jdx] = con_tower.deltaEta
+                        tower_deltaPhi[jdx] = con_tower.deltaPhi
+                        tower_deltaR[jdx] = con_tower.deltaR
                     tree.Fill()
+            print("Total number of tracks in this tree are: "+str(tot_ntr))
+            print("Total number of towers in this tree are: " + str(tot_nto))
             tree.Print()
             tree.Write()
+            file.Write()
+            file.Close()

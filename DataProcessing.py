@@ -22,7 +22,9 @@ class DataProcessing():
         self.signal = Signal(SigDir, print_hist=False)
         self.background = Background(BackDir, print_hist=False)
         self.signal.write_taucan_ttree("signal_tree")
-        #self.background.write_taucan_ttree("background_tree")
+        self.background.write_taucan_ttree("background_tree")
+        print("Num jets in signal are: " + str(len(self.signal.JetArray)))
+        print("Num jets in background are: " + str(len(self.background.JetArray)))
         self.canvases = {}
         self.legend = {}
         self.Hist_started = False
