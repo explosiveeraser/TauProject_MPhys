@@ -1,3 +1,5 @@
+import math
+
 import keras_preprocessing.sequence
 import matplotlib.pyplot as plt
 import numpy as np
@@ -103,7 +105,7 @@ class Tau_Model():
         self.RNNmodel.summary()
         plot_model(self.RNNmodel, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
         self.RNNmodel.compile(optimizer="SGD", loss="binary_crossentropy",
-                         metrics=['accuracy'])
+                         metrics=['accuracy', 'BinaryAccuracy', 'BinaryCrossentropy', 'AUC', 'Recall', 'Precision', 'TruePositives', 'TrueNegatives', 'FalsePositives', 'FalseNegatives'])
 
     def Process_Data(self, Data):
         scaler = MinMaxScaler()
@@ -180,8 +182,8 @@ class Tau_Model():
                                                [True, True, False, False, False, False, False, False, True, True, True,
                                                 False, False, False]))
             jet_index += 1
-            if jet_index == 3000:
-                break
+            #if jet_index == 3000:
+             #   break
         track_array = pad_sequences(track_array, dtype='float32', maxlen=6, padding='post')
         tower_array = pad_sequences(tower_array, dtype='float32', maxlen=10, padding='post')
         jet_array = np.array(self.Apply_Logarithm(self.Process_Data(jet_array),
@@ -198,17 +200,22 @@ class Tau_Model():
         print(self.history.history.keys())
 
     def plot_accuracy(self):
-        plt.plot(self.history.history['accuracy'])
-        plt.plot(self.history.history['val_accuracy'])
-        plt.title('model accuracy')
-        plt.ylabel('accuracy')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper left')
-        plt.show()
-        plt.plot(self.history.history['loss'])
-        plt.plot(self.history.history['val_loss'])
-        plt.title('Prong {} model loss'.format(self.prong))
-        plt.ylabel('loss')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper left')
+        print("TP: {} |TN {}\n----------\n FP: {} | FN: {}".format(self.history.history['true_positives'][9], self.history.history['true_negatives'][9], self.history.history['false_positives'][9], self.history.history['false_negatives'][9]))
+        figure, axis = plt.subplots(int(math.sqrt(len(self.history.history.keys())))+1, int(math.sqrt(len(self.history.history.keys())))+1)
+        ax1 = 0
+        ax2 = 0
+        print(int(math.sqrt(len(self.history.history.keys()))))
+        for key in self.history.history.keys():
+            if key not in {'true_positives', 'true_negatives', 'false_positives', 'false_negatives'}:
+                axis[ax1, ax2].plot(self.history.history[key])
+                axis[ax1, ax2].plot(self.history.history[key])
+                axis[ax1, ax2].set_title('model {}'.format(key))
+                axis[ax1, ax2].set_ylabel(key)
+                axis[ax1, ax2].set_xlabel('epoch')
+                axis[ax1, ax2].legend(['train', 'test'], loc='upper left')
+                if ax1 < int(math.sqrt(len(self.history.history.keys()))):
+                    ax1 +=1
+                else:
+                    ax2 += 1
+                    ax1 = 0
         plt.show()
