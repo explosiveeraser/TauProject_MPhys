@@ -75,7 +75,7 @@ class Signal(Dataset):
             num_particles = self._branchReader["Particle"].GetEntries()
             for ldx in range(0, num_particles):
                 particle = self._branchReader["Particle"].At(ldx)
-                evt_particle = Particle_(entry, evt, particle, hists=print_hist)
+                evt_particle = Particle_(entry, evt, particle, self._branchReader["Particle"], hists=print_hist)
                 particles.append(evt_particle)
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
@@ -227,7 +227,7 @@ class Signal(Dataset):
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             for jet in tqdm(self.JetArray):
                 if jet.PT >= 10.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(
-                        jet.Towers) >= 1 and jet.TruthTau is True:
+                        jet.Towers) >= 1 and jet.TruthTau[prong] is True:
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)
                     jet_weight[0] = jet.weight
@@ -244,7 +244,7 @@ class Signal(Dataset):
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
                     jet_max_deltaR[0] = jet.max_deltaR
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
-                    jet_TruthTau[0] = jet.TruthTau.__int__()
+                    jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
                     nTrack[0] = n_tr

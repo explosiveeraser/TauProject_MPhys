@@ -34,10 +34,11 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm, trange
 
 
-class Model():
+class Tau_Model():
 
-    def __init__(self, Prongs, BacktreeFile, BackTreeName,  SignaltreeFile, SignalTreeName, BackendPartOfTree="", SignalendPartOfTree="", val_split=0.2, batch_size=32, epochs=10 ):
-        self.output = TFile.Open("Prong-{}_RNN_Model.root".format(str(Prongs)))
+    def __init__(self, Prongs, BacktreeFile, BackTreeName,  SignaltreeFile, SignalTreeName, BackendPartOfTree="", SignalendPartOfTree=""):
+        self.prong = Prongs
+        self.output = TFile.Open("Prong-{}_RNN_Model.root".format(str(Prongs)), "RECREATE")
         back_tree_file = TFile.Open("../NewTTrees/{}.root".format(BacktreeFile))
         sig_tree_file = TFile.Open("../NewTTrees/{}.root".format(SignaltreeFile))
 
@@ -47,19 +48,24 @@ class Model():
         SignalNumEntries = self.SignalTree.GetEntries()
         BackgroundNumEntries = self.BackgroundTree.GetEntries()
         # call function above for sig and back data
-        sig_jet, sig_tr, sig_to, sig_label = self.read_tree(self.Signal_Tree)
+        sig_jet, sig_tr, sig_to, sig_label = self.read_tree(self.SignalTree)
 
-        back_jet, back_tr, back_to, back_label = self.read_tree(self.Background_Tree)
+        back_jet, back_tr, back_to, back_label = self.read_tree(self.BackgroundTree)
         # print(tf.convert_to_tensor(back_tr))
+        rng = np.random.default_rng(123)
         np.random.seed(123)
+        temp_jet = np.append(back_jet, sig_jet, axis=0)
+        temp_track = np.append(back_tr, sig_tr, axis=0)
+        temp_tower = np.append(back_to, sig_to, axis=0)
+        temp_labels = np.append(back_label, sig_label)
 
-        input_jet = np.random.shuffle(np.append(back_jet, sig_jet, axis=0))
-        input_track = np.random.shuffle(np.append(back_tr, sig_tr, axis=0))
-        input_tower = np.random.shuffle(np.append(back_to, sig_to, axis=0))
-        Ytrain = np.random.shuffle(np.append(back_label, sig_label))
-        self.Model()
+        self.input_jet = rng.permutation(temp_jet, axis=0)
+        self.input_track = rng.permutation(temp_track, axis=0)
+        self.input_tower = rng.permutation(temp_tower, axis=0)
+        self.Ytrain = rng.permutation(temp_labels, axis=0)
+        self.RNN_Model()
 
-    def Model(self):
+    def RNN_Model(self):
         # HL Layers
         HL_input = Input(shape=(13,))
         HLdense1 = Dense(128, activation='relu')(HL_input)
@@ -94,11 +100,10 @@ class Model():
         fullDense2 = Dense(32, activation='relu')(fullDense1)
         Output = Dense(1, activation='sigmoid')(fullDense2)
         self.RNNmodel = Model(inputs=[Track_input1, Tower_input1, HL_input], outputs=Output)
-        self.RNNmodel.save('tauRNN_1-prong.h5')
         self.RNNmodel.summary()
         plot_model(self.RNNmodel, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
         self.RNNmodel.compile(optimizer="SGD", loss="binary_crossentropy",
-                         metrics=[tf.keras.metrics.BinaryCrossentropy(), tf.keras.metrics.BinaryAccuracy()])
+                         metrics=['accuracy'])
 
     def Process_Data(self, Data):
         scaler = MinMaxScaler()
@@ -175,22 +180,21 @@ class Model():
                                                [True, True, False, False, False, False, False, False, True, True, True,
                                                 False, False, False]))
             jet_index += 1
-            if jet_index == 6000:
+            if jet_index == 3000:
                 break
         track_array = pad_sequences(track_array, dtype='float32', maxlen=6, padding='post')
         tower_array = pad_sequences(tower_array, dtype='float32', maxlen=10, padding='post')
         jet_array = np.array(self.Apply_Logarithm(self.Process_Data(jet_array),
                                              [False, False, False, False, False, False, False, False, False, True, True,
                                               False, False]))
-        print(self.Apply_Logarithm(self.Process_Data(jet_array),
-                              [False, False, False, False, False, False, False, False, False, True, True, False,
-                               False]))
         track_array = np.array(track_array)
         tower_array = np.array(tower_array)
+        label_array = np.array(label_array)
         return jet_array, track_array, tower_array, label_array
 
-    def Model_Fit(self, inputs, Y, batch_size, epochs, validation_split):
-        self.history = self.RNNmodel(inputs, Y, batch_size=batch_size, epochs=epochs, verbose=1, validation_split=validation_split, callbacks=[tf.keras.callbacks.EarlyStopping(patience=2)])
+    def Model_Fit(self, batch_size, epochs, validation_split):
+        self.history = self.RNNmodel.fit([self.input_track, self.input_tower, self.input_jet], self.Ytrain, batch_size=batch_size, epochs=epochs, verbose=1, validation_split=validation_split)
+        self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
         print(self.history.history.keys())
 
     def plot_accuracy(self):
@@ -203,7 +207,7 @@ class Model():
         plt.show()
         plt.plot(self.history.history['loss'])
         plt.plot(self.history.history['val_loss'])
-        plt.title('model loss')
+        plt.title('Prong {} model loss'.format(self.prong))
         plt.ylabel('loss')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')

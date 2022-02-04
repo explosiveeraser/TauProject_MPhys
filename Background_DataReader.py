@@ -72,7 +72,7 @@ class Background(Dataset):
             num_particles = self._branchReader["Particle"].GetEntries()
             for ldx in range(0, num_particles):
                 particle = self._branchReader["Particle"].At(ldx)
-                evt_particle = Particle_(entry, evt, particle, hists=print_hist)
+                evt_particle = Particle_(entry, evt, particle, self._branchReader["Particle"], hists=print_hist)
                 particles.append(evt_particle)
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
@@ -113,7 +113,6 @@ class Background(Dataset):
                             self.Fill_Histograms(branch, obj, weight, None)
         if print_hist:
             self.Normalize_Histograms()
-
 
     def write_taucan_ttree(self, fname):
         for prong in {'1-Prong', '3-Prong'}:
@@ -241,7 +240,7 @@ class Background(Dataset):
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
                     jet_max_deltaR[0] = jet.max_deltaR
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
-                    jet_TruthTau[0] = jet.TruthTau.__int__()
+                    jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
                     nTrack[0] = n_tr

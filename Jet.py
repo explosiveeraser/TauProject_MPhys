@@ -57,7 +57,7 @@ class Jet_():
         # self.Iso_Tracks = []
         # self.Core_Towers = []
         # self.Iso_Towers = []
-        self.TruthTau = False
+        self.TruthTau = {"1-Prong" : False, "3-Prong" : False, "N>3-Prong" : False}
         self.numTaus = 0
         # self._Find_Tracks(Event_Tracks)
         # self._Add_Towers()
@@ -81,7 +81,12 @@ class Jet_():
                 self.Particles.append(check_p)
                 self.num_particles += 1
                 if check_p.PID == 15 or check_p == -15:
-                    self.TruthTau = True
+                    if check_p.tau_prongness == 1:
+                        self.TruthTau["1-Prong"] = True
+                    elif check_p.tau_prongness == 3:
+                        self.TruthTau["3-Prong"] = True
+                    elif check_p.tau_prongness > 3:
+                        self.TruthTau["N>3-Prong"] = True
                     self.numTaus += 1
 
     def check_if_con(self, con_eta, con_phi):
