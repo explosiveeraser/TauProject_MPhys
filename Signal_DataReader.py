@@ -140,6 +140,7 @@ class Signal(Dataset):
             jet_iF_leadtrack = array('f', [0.])
             jet_max_deltaR = array('f', [0.])
             jet_Ftrack_Iso = array('f', [0.])
+            jet_TruthTau = array('i', [0])
             nTrack = array('i', [0])
             nTower = array('i', [0])
             track_entry = array('i', MaxNtrack*[0])
@@ -223,6 +224,7 @@ class Signal(Dataset):
             tree.Branch("tower_deltaEta", tower_deltaEta, "tower_deltaEta[nTower]/F")
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("tower_deltaR", tower_deltaR, "tower_deltaR[nTower]/F")
+            tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             for jet in tqdm(self.JetArray):
                 if jet.PT >= 10.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1 and jet.TruthTau is True:
@@ -242,6 +244,7 @@ class Signal(Dataset):
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
                     jet_max_deltaR[0] = jet.max_deltaR
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
+                    jet_TruthTau[0] = jet.TruthTau.__int__()
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
                     nTrack[0] = n_tr

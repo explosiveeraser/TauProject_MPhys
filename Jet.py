@@ -72,7 +72,6 @@ class Jet_():
 #        self.impactP_leadTrack()
         self.F_IsoTracks()
 
-
     def _Find_Particles(self, evt_particles):
         num_particles = len(evt_particles)
         for idx in range(0, num_particles):

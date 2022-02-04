@@ -42,3 +42,5 @@ class Particle_():
             self.CoreRegion = True
         elif self.deltaR > 0.2 and self.deltaR <= 0.6:
             self.IsoRegion = True
+
+    def getStableDaughters(self, branch):
