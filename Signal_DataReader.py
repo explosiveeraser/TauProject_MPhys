@@ -187,7 +187,6 @@ class Signal(Dataset):
             tree.Branch("jet_charge", jet_charge, "jet_charge/F")
             tree.Branch("jet_NCharged", jet_NCharged, "jet_NCharged/F")
             tree.Branch("jet_NNeutral", jet_NNeutral, "jet_NNeutral/F")
-            tree.Branch("jet_deltaR", jet_deltaR, "jet_deltaR/F")
             tree.Branch("jet_f_cent", jet_f_cent, "jet_f_cent/F")
             tree.Branch("jet_iF_leadtrack", jet_iF_leadtrack, "jet_iF_leadtrack/F")
             tree.Branch("jet_max_deltaR", jet_max_deltaR, "jet_max_deltaR/F")
@@ -243,7 +242,7 @@ class Signal(Dataset):
                     jet_f_cent[0] = jet.f_cent
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
                     jet_max_deltaR[0] = jet.max_deltaR
-                    jet_iF_leadtrack[0] = jet.iF_leadtrack
+                    jet_Ftrack_Iso[0] = jet.Ftrack_Iso
                     jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)

@@ -45,31 +45,17 @@ class Jet_():
         else:
             self.TauCan_1Prong = False
             self.TauCan_3Prong = False
-    #Remove to avoid dc (double counting)
-        #self.particles = particles
-        #self.TruthTau = jet_obj.TauTag
-    #Removed to avoid double counting
-        #self.constituents = constituents
         self.Tracks = []
         self.Towers = []
         self.Particles = []
-        # self.Core_Tracks = []
-        # self.Iso_Tracks = []
-        # self.Core_Towers = []
-        # self.Iso_Towers = []
         self.TruthTau = {"1-Prong" : False, "3-Prong" : False, "N>3-Prong" : False}
         self.numTaus = 0
-        # self._Find_Tracks(Event_Tracks)
-        # self._Add_Towers()
         self._Find_Particles(Event_Particles)
         self._Find_Tracks(Event_Tracks)
         self._Find_Towers(Event_Towers)
-#        self.Regions_Tracks()
- #       self.Regions_Towers()
         self.Central_Energy_Fraction()
         self.Inverse_MomFrac_LeadTrack()
         self.Maximum_deltaR()
-#        self.impactP_leadTrack()
         self.F_IsoTracks()
 
     def _Find_Particles(self, evt_particles):
@@ -116,71 +102,6 @@ class Jet_():
                 self.Towers.append(check_to)
                 self.num_towers += 1
 
-
-    # def _Find_Tracks(self, evt_tracks):
-    #     num_tracks = len(evt_tracks)
-    #     self.num_tracks = 0
-    #     for idx in range(0, num_tracks):
-    #         check_particle = evt_tracks[idx].particle
-    #         check = self.particles.Contains(check_particle)
-    #         if check:
-    #             track = evt_tracks[idx]
-    #             self.Tracks.append(track)
-    #             self.Tracks[self.num_tracks].Jet_Association(self.Eta, self.Phi)
-    #             self.num_tracks += 1
-
-    # def _Add_Towers(self):
-    #     num_const = len(self.constituents)
-    #     self.num_towers = 0
-    #     for idx in range(0, num_const):
-    #         const = self.constituents[idx]
-    #         if const.ClassName() == "Tower":
-    #             tower = Tower_(self.entry, self.event, self.weight, const)
-    #             self.Towers.append(tower)
-    #             self.Towers[self.num_towers].Jet_Association(self.Eta, self.Phi)
-    #             self.num_towers += 1
-
-    # def _Contains_Tau(self, particles):
-    #     num1 = particles.GetEntries()
-    #     found_tau = False
-    #     for i in range(0, num1):
-    #         test = particles.At(i).PID
-    #         if test == 15 or test == -15:
-    #             print("True")
-    #             found_tau = True
-    #     for track in self.Tracks:
-    #         particle = track.particle
-    #         if particle.PID == 15 or particle.PID == -15:
-    #             found_tau = True
-    #             print("True")
-    #     for tower in self.Towers:
-    #         particles = tower.particles
-    #         num2 = particles.GetEntries()
-    #         for j in range(0, num2):
-    #             to_test = particles.At(j).PID
-    #             if to_test == 15 or to_test == -15:
-    #                 found_tau = True
-    #                 print("True")
-    #     return found_tau
-
-    # def Regions_Tracks(self):
-    #     num = len(self.Tracks)
-    #     for idx in range(0, num):
-    #         track = self.Tracks[idx]
-    #         if track.deltaEta < 0.2:
-    #             self.Core_Tracks.append(track)
-    #         elif track.deltaEta >= 0.2:
-    #             self.Iso_Tracks.append(track)
-    #
-    # def Regions_Towers(self):
-    #     num = len(self.Towers)
-    #     for idx in range(0, num):
-    #         tower = self.Towers[idx]
-    #         if tower.deltaEta < 0.2:
-    #             self.Core_Towers.append(tower)
-    #         elif tower.deltaEta >= 0.2:
-    #             self.Iso_Towers.append(tower)
-
     #may use Eem instead of ET
     def Central_Energy_Fraction(self, deltaR1=0.1, deltaR2=0.2):
         sE1 = 0
@@ -191,10 +112,12 @@ class Jet_():
                     sE1 += tower.ET
                 elif tower.deltaR < deltaR2:
                     sE2 += tower.ET
-        try:
+        if sE2 != 0:
             self.f_cent = sE1/sE2
-        except:
-            self.f_cent = 9999999999
+        else:
+            self.f_cent = -1.
+       # if self.f_cent > 1.:
+        #    self.f_cent = 1.
 
     def Inverse_MomFrac_LeadTrack(self):
         TE_C = 0
@@ -206,10 +129,12 @@ class Jet_():
             if track.CoreRegion:
                 if track.PT >= hPT:
                     hPT = track.PT
-        try:
+        if hPT != 0:
             self.iF_leadtrack = TE_C/hPT
-        except:
-            self.iF_leadtrack = 99999999
+        else:
+            self.iF_leadtrack = -1.
+      #  if self.iF_leadtrack > 4.:
+            #self.iF_leadtrack = 4.
 
     def Maximum_deltaR(self):
         self.max_deltaR = 0
@@ -217,23 +142,8 @@ class Jet_():
             if track.CoreRegion:
                 if track.deltaR >= self.max_deltaR:
                     self.max_deltaR = track.deltaR
-
-
-#    def impactP_leadTrack(self):
-#        try:
-#            leadtrack = self.Core_Tracks[0]
-#            for track in self.Core_Tracks:
-#                if track.PT >= leadtrack.PT:
-#                    leadtrack = track
-#            try:
-#                self.impactD0 = leadtrack.D0/leadtrack.ErrorD0
-#            except:
-#                self.impactD0 = 999999999
-#        except:
-#            self.impactD0 = 99999999
-
-
-    #def TransFlightPath
+        if self.max_deltaR > 0.2:
+            self.max_deltaR = 0.2
 
     def F_IsoTracks(self):
         Iso_PT = 0
@@ -243,16 +153,10 @@ class Jet_():
                 Iso_PT += track.PT
         for track in self.Tracks:
             All_PT += track.PT
-        try:
+        if All_PT != 0:
             self.Ftrack_Iso = Iso_PT/All_PT
-        except:
-            self.Ftrack_Iso = 0
-
-    #def mass_TandEMSystem(self):
-     #find track masses (use jitted function)?
-
-    #def mass_TrackSys(self):
-    #similar to above
+        else:
+            self.Ftrack_Iso = 10000.
 
 
 
