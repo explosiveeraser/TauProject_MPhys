@@ -46,6 +46,66 @@ class Tau_Model():
         self.inputs = inputs
         self.y = y
         self.RNN_Model()
+        self.basic_Model()
+        self.RNN_ModelwoTowers()
+
+    def basic_Model(self):
+        HL_input = Input(shape=(13,))
+        HLdense1 = Dense(128, activation='relu', kernel_initializer='RandomUniform',
+                         bias_initializer='zeros')(HL_input)
+        HLdense3 = Dense(16, activation='relu', kernel_initializer='RandomUniform',
+                         bias_initializer='zeros')(HLdense1)
+        Output = Dense(1, activation='sigmoid', kernel_initializer='RandomUniform',
+                       bias_initializer='zeros')(HLdense3)
+        self.basic_model = Model(inputs=[HL_input], outputs=Output)
+        self.basic_model.summary()
+        plot_model(self.basic_model, to_file="basic_Model.png", show_shapes=True, show_layer_names=True)
+        self.basic_model.compile(optimizer=SGD(learning_rate=0.01, momentum=0.9, nesterov=True), loss="binary_crossentropy",
+                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives'])
+
+    def RNN_ModelwoTowers(self):
+        backwards = False
+        unroll = False
+
+        # HL Layers
+        HL_input = Input(shape=(13,))
+        HLdense1 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(HL_input)
+        HLdense2 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(HLdense1)
+        HLdense3 = Dense(16, activation='relu', kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(HLdense2)
+        # Track Layers
+        Track_input1 = Input(shape=(None, 5))
+        maskedTrack = Masking()(Track_input1)
+        # Track_input2 = Input(shape=(10,))
+        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, 5), kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')
+        trackDense2 = Dense(32, activation='relu', input_shape=(None, None, 32), kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')
+        trackSD1 = TimeDistributed(trackDense1)(maskedTrack)
+        trackSD2 = TimeDistributed(trackDense2)(trackSD1)
+        # mergeTrack = Concatenate()([trackSD1, trackSD2])
+        # flatten = TimeDistributed(Flatten())(trackSD2)
+        trackLSTM1 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(trackSD2)
+        trackLSTM2 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32),  kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(trackLSTM1)
+        # Layers Merged
+        mergedLayer = Concatenate()([trackLSTM2, HLdense3])
+        fullDense1 = Dense(64, activation='relu', kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(mergedLayer)
+        fullDense2 = Dense(32, activation='relu', kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(fullDense1)
+        Output = Dense(1, activation='sigmoid', kernel_initializer = 'RandomUniform',
+                bias_initializer = 'zeros')(fullDense2)
+        self.RNNmodel_woTower = Model(inputs=[Track_input1, HL_input], outputs=Output)
+        self.RNNmodel_woTower.summary()
+        plot_model(self.RNNmodel_woTower, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
+        #SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
+        self.RNNmodel_woTower.compile(optimizer='adam', loss="binary_crossentropy",
+                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives'])
+
 
     def RNN_Model(self):
         backwards = False
@@ -101,21 +161,37 @@ class Tau_Model():
         self.RNNmodel = Model(inputs=[Track_input1, Tower_input1, HL_input], outputs=Output)
         self.RNNmodel.summary()
         plot_model(self.RNNmodel, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
-        self.RNNmodel.compile(optimizer=SGD(learning_rate=0.01, momentum=0.9, nesterov=True), loss="binary_crossentropy",
-                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives'])
+        #SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
+        self.RNNmodel.compile(optimizer='adam', loss="binary_crossentropy",
+                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives', "FalseNegatives"])
 
-    def Model_Fit(self, batch_size, epochs, validation_split):
-        self.history = self.RNNmodel.fit(self.inputs, self.y, batch_size=batch_size, epochs=epochs, verbose=1, validation_split=validation_split)
-        self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
-        print(self.history.history.keys())
+    def Model_Fit(self, batch_size, epochs, validation_split, model="RNNmodel", inputs="RNNmodel"):
+        if type(model) == str:
+            self.history = self.RNNmodel.fit(self.inputs, self.y, batch_size=batch_size, epochs=epochs, verbose=1, validation_split=validation_split)
+            self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
+            print(self.history.history.keys())
+        else:
+            self.history = model.fit(inputs, self.y, batch_size=batch_size, epochs=epochs, verbose=1,
+                                             validation_split=validation_split)
+            model.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
+            print(self.history.history.keys())
+
+    def evaluate_model(self, inputs, outputs, model, batch_size=256):
+        results = model.evaluate(inputs, outputs, batch_size=batch_size)
+        print("test loss, test acc:", results)
+        print("TrueTau/FakeTau", results[3]/(results[3]+results[4]))
+        print("Taus Not IDed : ", results[5])
+        print("Total Taus: ",results[3]+results[4]+results[5])
+
 
     def plot_accuracy(self):
-        print("TP: {} |TN {}\n----------\n FP: {} | FN: {}".format(self.history.history['true_positives'][9], self.history.history['true_negatives'][9], self.history.history['false_positives'][9], self.history.history['false_negatives'][9]))
-        figure, axis = plt.subplots(int(math.sqrt(len(self.history.history.keys())))+1, int(math.sqrt(len(self.history.history.keys())))+1)
+        #print("TP: {} |TN {}\n----------\n FP: {} | FN: {}".format(self.history.history['true_positives'][9], self.history.history['true_negatives'][9], self.history.history['false_positives'][9]))
+        #figure, axis = plt.subplots(int(math.sqrt(len(self.history.history.keys())))+1, int(math.sqrt(len(self.history.history.keys())))+1)
+        figure, axis = plt.subplots( 2, 2)
         ax1 = 0
         ax2 = 0
         print(int(math.sqrt(len(self.history.history.keys()))))
-        for key in self.history.history.keys():
+        for key in ["val_binary_crossentropy", 'val_accuracy', 'val_true_positives', 'val_false_positives']:
             if key not in {'true_positives', 'true_negatives', 'false_positives', 'false_negatives'}:
                 axis[ax1, ax2].plot(self.history.history[key])
                 axis[ax1, ax2].plot(self.history.history[key])
@@ -123,9 +199,15 @@ class Tau_Model():
                 axis[ax1, ax2].set_ylabel(key)
                 axis[ax1, ax2].set_xlabel('epoch')
                 axis[ax1, ax2].legend(['train', 'test'], loc='upper left')
-                if ax1 < int(math.sqrt(len(self.history.history.keys()))):
-                    ax1 +=1
+                if ax1 < 1:
+                    ax1 += 1
                 else:
                     ax2 += 1
                     ax1 = 0
         plt.show()
+
+    def plot_feature_heatmap(self, features, model):
+        plt.figure(figsize=(40,5))
+        plt.imshow(model.coefs_[0], interpolation='none', cmap='viridis')
+        plt.yticks(len(features), features)
+        plt.xlabel()
