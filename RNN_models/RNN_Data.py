@@ -10,6 +10,7 @@ from subprocess import call
 from os.path import isfile
 import pandas as pd
 import random
+import os
 
 from tensorflow.python import pywrap_tensorflow as _pywrap_tensorflow
 from tensorflow.python.eager import context
@@ -43,9 +44,11 @@ from root_numpy import tree2array
 
 class RNN_Data():
 
-    def __init__(self, Prongs, load_pickled_data, pickle_file, BacktreeFile="", BackTreeName="",  SignaltreeFile="", SignalTreeName="", BackendPartOfTree="", SignalendPartOfTree=""):
+    def __init__(self, Prongs, load_pickled_data, pickle_file, print_hists=True, BacktreeFile="", BackTreeName="",  SignaltreeFile="", SignalTreeName="", BackendPartOfTree="", SignalendPartOfTree=""):
         self.prong = Prongs
         self.dicts_file = "input_dicts"
+        self.hists_before_trans = {}
+        self.hists_after_trans = {}
         if not load_pickled_data:
             self.preprocessing = {}
             back_tree_file = TFile.Open("../NewTTrees/{}.root".format(BacktreeFile))
@@ -65,45 +68,49 @@ class RNN_Data():
             self.input_tower = tower_arr
             self.Ytrain = label
             file = open(pickle_file, "wb")
-            pickle.dump([self.input_track, self.input_tower, self.input_jet, self.Ytrain], file)
+            pickle.dump([self.input_track, self.input_tower, self.input_jet, self.Ytrain, [self.sig_pt, self.bck_pt]], file)
             file.close()
-            rng = np.random.default_rng(123)
-            np.random.seed(123)
-            self.input_jet = np.append(jet_arr[0:20000], jet_arr[-17212:-1], axis=0)
-            self.input_track = np.append(track_arr[0:20000], track_arr[-17212:-1], axis=0)
-            self.input_tower = np.append(tower_arr[0:20000], tower_arr[-17212:-1], axis=0)
-            self.Ytrain = np.append(label[0:20000], label[-17212:-1], axis=0)
-            shuffled_indices = rng.permutation(len(self.Ytrain))
-            self.input_jet = self.input_jet[shuffled_indices]
-            self.input_track = self.input_track[shuffled_indices]
-            self.input_tower = self.input_tower[shuffled_indices]
-            self.Ytrain = self.Ytrain[shuffled_indices]
-            self.Ytrain = self.Ytrain.astype(np.int8)
+            self.bck_pt = self.bck_pt[0:50000]
+            self.jet_pt = np.append(self.jet_pt[0:50000], self.jet_pt[-17212:-1], axis=0)
+            self.input_jet = np.append(jet_arr[0:50000], jet_arr[-17212:-1], axis=0)
+            self.input_track = np.append(track_arr[0:50000], track_arr[-17212:-1], axis=0)
+            self.input_tower = np.append(tower_arr[0:50000], tower_arr[-17212:-1], axis=0)
+            self.Ytrain = np.append(label[0:50000], label[-17212:-1], axis=0)
         elif load_pickled_data:
             #print(rn.root2array("../NewTTrees/{}.root".format(BacktreeFile), treename="{}{}".format(BackTreeName, BackendPartOfTree), branches=["track_PT"]))
             file = open(pickle_file, "rb")
             data = pickle.load(file)
             file.close()
+            file = open("{}_untransformed_data".format(self.prong), "rb")
+            [track_untrans, tower_untrans, jet_untrans, yval] = pickle.load(file)
+            file.close()
+            self.jet_pt = jet_untrans["jet_PT"]
+            if print_hists:
+                file = open("{}_transformed_data".format(self.prong), "rb")
+                [track_trans, tower_trans, jet_trans, yval] = pickle.load(file)
+                file.close()
+                self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yval)
+                self.fill_trans_hists(jet_trans, track_trans, tower_trans, yval)
+                self.plot_hists()
             temp_jet = data[2]
             temp_track = data[0]
             temp_tower = data[1]
             temp_labels = data[3]
-            rng = np.random.default_rng(123)
-            np.random.seed(123)
+            self.sig_pt = data[4][0]
+            self.bck_pt = data[4][1]
+            seed = np.random.randint(1, 9999)
+            rng = np.random.default_rng(seed)
+            np.random.seed(seed)
             self.all_jet = temp_jet
             self.all_track = temp_track
             self.all_tower = temp_tower
             self.all_label = temp_labels
-            self.input_jet = np.append(temp_jet[0:20000], temp_jet[-17212:-1], axis=0)
-            self.input_track = np.append(temp_track[0:20000], temp_track[-17212:-1], axis=0)
-            self.input_tower = np.append(temp_tower[0:20000], temp_tower[-17212:-1], axis=0)
-            self.Ytrain = np.append(temp_labels[0:20000], temp_labels[-17212:-1], axis=0)
-            shuffled_indices = rng.permutation(len(self.Ytrain))
-            self.input_jet = self.input_jet[shuffled_indices]
-            self.input_track = self.input_track[shuffled_indices]
-            self.input_tower = self.input_tower[shuffled_indices]
-            self.Ytrain = self.Ytrain[shuffled_indices]
-            #self.Ytrain = self.Ytrain.astype(np.int8)
+            self.bck_pt = self.bck_pt[0:50000]
+            self.jet_pt = np.append(self.jet_pt[0:50000], self.jet_pt[-17212:-1], axis=0)
+            self.input_jet = np.append(temp_jet[0:50000], temp_jet[-17212:-1], axis=0)
+            self.input_track = np.append(temp_track[0:50000], temp_track[-17212:-1], axis=0)
+            self.input_tower = np.append(temp_tower[0:50000], temp_tower[-17212:-1], axis=0)
+            self.Ytrain = np.append(temp_labels[0:50000], temp_labels[-17212:-1], axis=0)
 
 
     # TRACK_ARRAY: ['[index]',[P], [PT], [L], [D0], [DZ], [e], [e], [deltaEta], [deltaPhi], [deltaR]]
@@ -201,8 +208,6 @@ class RNN_Data():
         self.preprocessing[feature] = (offset, scale)
         return new_arr
 
-#["track_P", "track_PT", "track_Eta", "track_Phi", "track_L", "track_D0", "track_DZ", "track_deltaEta",
- #                         "track_deltaPhi", "track_deltaR"]:
 
     def sort_inputs(self, jet_dict, track_dict, tower_dict):
         jet_input = []
@@ -245,17 +250,264 @@ class RNN_Data():
         tower_input = np.array(tower_input)
         return jet_input, track_input, tower_input
 
+    def fill_untrans_hists(self, jet, track, tower, label):
+        if not os.path.exists("{}_untransformed_data".format(self.prong)):
+            file = open("{}_untransformed_data".format(self.prong), "wb")
+            pickle.dump([track, tower, jet, label], file)
+            file.close()
+        for key in tqdm({"jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
+                    "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
+                    "jet_Ftrack_Iso"}):
+            min_val = np.min(jet[key].flatten().flatten())
+            max_val = np.max(jet[key].flatten().flatten())
+            for l in [0, 1]:
+                arr_ = jet[key][label == l]
+                arr = arr_.flatten().flatten()
+                arr = arr[np.abs(arr) != 0.]
+                # print(arr)
+                self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 35,
+                                                                    min_val, max_val)
+                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
+        for key in tqdm({"track_P", "track_PT", "track_L", "track_D0", "track_DZ", "track_deltaEta",
+                    "track_deltaPhi", "track_deltaR"}):
+            a = track[key].flatten().flatten()
+            min_val = np.min(a[~np.isnan(a)])
+            max_val = np.max(a[~np.isnan(a)])
+            for l in [0, 1]:
+                arr_ = track[key][label == l]
+                print(arr_)
+                arr = arr_.flatten().flatten().flatten()
+                arr = arr[np.abs(arr) != 0.]
+                arr = arr[~np.isnan(arr)]
+                self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                                                                    35, min_val,
+                                                                    max_val)
+                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
+        for key in tqdm({"tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
+                    "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi",
+                    "tower_deltaR"}):
+            a = tower[key].flatten().flatten()
+            min_val = np.min(a[~np.isnan(a)])
+            max_val = np.max(a[~np.isnan(a)])
+            for l in [0, 1]:
+                arr_ = tower[key][label == l]
+                arr = arr_.flatten().flatten().flatten()
+                arr = arr[np.abs(arr) != 0.]
+                arr = arr[~np.isnan(arr)]
+                self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                                                                    35, min_val,
+                                                                    max_val)
+                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
+
+
+    def fill_trans_hists(self, jet, track, tower, label):
+        if not os.path.exists("{}_transformed_data".format(self.prong)):
+            file = open("{}_transformed_data".format(self.prong), "wb")
+            pickle.dump([track, tower, jet, label], file)
+            file.close()
+        for key in tqdm({"jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
+                    "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
+                    "jet_Ftrack_Iso"}):
+            min_val = np.min(jet[key].flatten().flatten())
+            max_val = np.max(jet[key].flatten().flatten())
+            for l in [0, 1]:
+                arr_ = jet[key][label == l]
+                arr = arr_.flatten().flatten()
+                arr = arr[np.abs(arr) != 0.]
+                # print(arr)
+                self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 35,
+                                                                    min_val, max_val)
+                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
+        for key in tqdm({"track_P", "track_PT", "track_L", "track_D0", "track_DZ", "track_deltaEta",
+                    "track_deltaPhi", "track_deltaR"}):
+            a = track[key].flatten().flatten()
+            min_val = np.min(a[~np.isnan(a)])
+            max_val = np.max(a[~np.isnan(a)])
+            for l in [0, 1]:
+                arr_ = track[key][label == l]
+                arr = arr_.flatten().flatten().flatten()
+                arr = arr[np.abs(arr) != 0.]
+                arr = arr[~np.isnan(arr)]
+                self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                                                                    35, min_val,
+                                                                    max_val)
+                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
+        for key in tqdm({"tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
+                    "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi",
+                    "tower_deltaR"}):
+            a = tower[key].flatten().flatten()
+            min_val = np.min(a[~np.isnan(a)])
+            max_val = np.max(a[~np.isnan(a)])
+            for l in [0, 1]:
+                arr_ = tower[key][label == l]
+                arr = arr_.flatten().flatten().flatten()
+                arr = arr[np.abs(arr) != 0.]
+                arr = arr[~np.isnan(arr)]
+                self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                                                                    35, min_val,
+                                                                    max_val)
+                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
+
+    def plot_hists(self):
+        jet_i = 0
+
+        legendJ = []
+        legendTr = []
+        legendTo = []
+
+        jet_canvas = ROOT.TCanvas("Jet_Inputs", "Jet_Inputs")
+        jet_canvas.Divide(9, 3)
+        jet_canvas.cd(0)
+        jet_canvas.cd(1)
+        for key in tqdm({"jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
+                    "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
+                    "jet_Ftrack_Iso"}):
+            for t in ["not_transformed", "transformed"]:
+                legendJ.append(ROOT.TLegend(0.05, 0.85, 0.2, 0.95))
+                if t == "not_transformed":
+                    for l in [0, 1]:
+                        if l == 0:
+                          #  print(self.hists_before_trans)
+                            integral = self.hists_before_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_before_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].Draw("HIST")
+                        else:
+                            integral = self.hists_before_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_before_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].SetLineColor(ROOT.kRed)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].Draw("HIST SAMES0")
+                        legendJ[jet_i].AddEntry(self.hists_before_trans["{}_label{}".format(key, l)], "{} Label: {}".format(key, l), "L")
+                if t == "transformed":
+                    for l in [0, 1]:
+                        if l == 0:
+                            integral = self.hists_after_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_after_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].Draw("HIST")
+                        else:
+                            integral = self.hists_after_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_after_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].SetLineColor(ROOT.kRed)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].Draw("HIST SAMES0")
+                        legendJ[jet_i].AddEntry(self.hists_after_trans["{}_label{}".format(key, l)], "{} Label: {}".format(key, l), "L")
+                legendJ[jet_i].Draw()
+                jet_canvas.Update()
+                jet_i += 1
+                jet_canvas.cd(jet_i + 1)
+        track_i = 0
+        track_canvas = ROOT.TCanvas("Track_Inputs", "Track_Inputs")
+        track_canvas.Divide(6, 3)
+        track_canvas.cd(0)
+        track_canvas.cd(1)
+
+        for key in tqdm({"track_P", "track_PT", "track_L", "track_D0", "track_DZ", "track_deltaEta",
+                    "track_deltaPhi", "track_deltaR"}):
+            for t in ["not_transformed", "transformed"]:
+                legendTr.append(ROOT.TLegend(0.05, 0.85, 0.2, 0.95))
+                if t == "not_transformed":
+                    for l in [0, 1]:
+                        if l == 0:
+                            integral = self.hists_before_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_before_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].Draw("HIST")
+                        else:
+                            integral = self.hists_before_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_before_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].SetLineColor(ROOT.kRed)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].Draw("HIST SAMES0")
+                        legendTr[track_i].AddEntry(self.hists_before_trans["{}_label{}".format(key, l)], "{} Label: {}".format(key, l), "L")
+                if t == "transformed":
+                    for l in [0, 1]:
+                        if l == 0:
+                            integral = self.hists_after_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_after_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].Draw("HIST")
+                        else:
+                            integral = self.hists_after_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_after_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].SetLineColor(ROOT.kRed)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].Draw("HIST SAMES0")
+                        legendTr[track_i].AddEntry(self.hists_after_trans["{}_label{}".format(key, l)], "{} Label: {}".format(key, l), "L")
+                legendTr[track_i].Draw()
+                track_canvas.Update()
+                track_i += 1
+                track_canvas.cd(track_i + 1)
+
+        tower_i = 0
+
+        tower_canvas = ROOT.TCanvas("Tower_Inputs", "Tower_Inputs")
+        tower_canvas.Divide(8, 4)
+        tower_canvas.cd(0)
+        tower_canvas.cd(1)
+        for key in tqdm({"tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
+                    "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi",
+                    "tower_deltaR"}):
+            for t in ["not_transformed", "transformed"]:
+                legendTo.append(ROOT.TLegend(0.05, 0.85, 0.2, 0.95))
+                if t == "not_transformed":
+                    for l in [0, 1]:
+                        if l == 0:
+                            integral = self.hists_before_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_before_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].Draw("HIST")
+                        else:
+                            integral = self.hists_before_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_before_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].SetLineColor(ROOT.kRed)
+                            self.hists_before_trans["{}_label{}".format(key, str(l))].Draw("HIST SAMES0")
+                        legendTo[tower_i].AddEntry(self.hists_before_trans["{}_label{}".format(key, l)], "{} Label: {}".format(key, l), "L")
+                if t == "transformed":
+                    for l in [0, 1]:
+                        if l == 0:
+                            integral = self.hists_after_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_after_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].Draw("HIST")
+                        else:
+                            integral = self.hists_after_trans["{}_label{}".format(key, str(l))].Integral()
+                            if integral != 0.:
+                                self.hists_after_trans["{}_label{}".format(key, str(l))].Scale(1 / integral)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].SetLineColor(ROOT.kRed)
+                            self.hists_after_trans["{}_label{}".format(key, str(l))].Draw("HIST SAMES0")
+                        legendTo[tower_i].AddEntry(self.hists_after_trans["{}_label{}".format(key, l)], "{} Label: {}".format(key, l), "L")
+                legendTo[tower_i].Draw()
+                tower_canvas.Update()
+                tower_i += 1
+                tower_canvas.cd(tower_i + 1)
+
+        jet_canvas.Print("Jet_Inputs.pdf")
+        track_canvas.Print("Track_Inputs.pdf")
+        tower_canvas.Print("Tower_Inputs.pdf")
+
+        input("Enter to continue")
+        return True
+
+
+
     def read_tree(self, backtree, sigtree):
         jet = {}
         track = {}
         tower = {}
-        for jet_var in [ "jet_TruthTau", "jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
+        jet_untrans = {}
+        track_untrans = {}
+        tower_untrans = {}
+        for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
                          "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
-                         "jet_Ftrack_Iso", "nTrack", "nTower"]:
+                         "jet_Ftrack_Iso", "nTrack", "nTower"]):
             if jet_var != "jet_TruthTau":
                 backjet = tree2array(backtree, branches=[jet_var]).astype(np.float32)
                 sigjet = tree2array(sigtree, branches=[jet_var]).astype(np.float32)
                 jet[jet_var] = np.append(backjet, sigjet, axis=0).astype(np.float32)
+                jet_untrans[jet_var] = np.append(backjet, sigjet, axis=0).astype(np.float32)
                 if jet_var == "nTrack":
                     max_nTrack = int(np.amax(jet["nTrack"]))
                 if jet_var == "nTower":
@@ -265,6 +517,8 @@ class RNN_Data():
                 if jet_var in ["jet_PT", "jet_Eta", "jet_Phi", "jet_charge", "jet_f_cent", "jet_iF_leadtrack"]:
                     if jet_var in ["jet_PT", "jet_f_cent", "jet_iF_leadtrack"]:
                         if jet_var in ["jet_PT"]:
+                            self.sig_pt = sigjet
+                            self.bck_pt = backjet
                             jet[jet_var] = self.log_epsilon(jet[jet_var])
                         elif jet_var in ["jet_f_cent", "jet_iF_leadtrack"]:
                             for idx in range(0, len(jet[jet_var])):
@@ -286,8 +540,8 @@ class RNN_Data():
                 yLabel = np.append(backlabel, siglabel, axis=0)
         max_nTower = 100
         max_nTrack = 100
-        for track_var in ["track_P", "track_PT", "track_Eta", "track_Phi", "track_L", "track_D0", "track_DZ", "track_deltaEta",
-                          "track_deltaPhi", "track_deltaR"]:
+        for track_var in tqdm(["track_P", "track_PT", "track_Eta", "track_Phi", "track_L", "track_D0", "track_DZ", "track_deltaEta",
+                          "track_deltaPhi", "track_deltaR"]):
             backtrack = tree2array(backtree, branches=[track_var])
             sigtrack = tree2array(sigtree, branches=[track_var])
             temp_arr = np.append(backtrack, sigtrack, axis=0)
@@ -300,6 +554,7 @@ class RNN_Data():
                         new_arr[idx][jdx] = v
                         jdx += 1
             track[track_var] = new_arr
+            track_untrans[track_var] = new_arr
             if track_var == "track_PT":
                 track_PT = track["track_PT"]
             if track_var in ["track_P", "track_PT", "track_L", "track_D0", "track_DZ"]:
@@ -314,8 +569,8 @@ class RNN_Data():
                 track[track_var] = self.preprocess(track_var, track[track_var], partial(self.constant_scale, scale=0.6))
    #     print(sorted(range(len(track["track_PT"][3])), key=lambda k: track["track_PT"][3][k], reverse=True))
   #      print(sorted(range(len(track_PT[3])), key=lambda k: track_PT[3][k], reverse=True))
-        for tower_var in ["tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
-                          "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi", "tower_deltaR"]:
+        for tower_var in tqdm(["tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
+                          "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi", "tower_deltaR"]):
             backtower = tree2array(backtree, branches=[tower_var])
             sigtower = tree2array(sigtree, branches=[tower_var])
             temp_arr = np.append(backtower, sigtower, axis=0)
@@ -328,6 +583,7 @@ class RNN_Data():
                         new_arr[idx][jdx] = v
                         jdx += 1
             tower[tower_var] = new_arr
+            tower_untrans[tower_var] = new_arr
             if tower_var == "tower_ET":
                 tower_ET = tower["tower_ET"]
             if tower_var in ["tower_E", "tower_ET", "tower_Eem", "tower_Ehad", "tower_T"]:
@@ -352,6 +608,9 @@ class RNN_Data():
         file = open(self.dicts_file, "wb")
         pickle.dump([jet, track, tower, yLabel], file)
         file.close()
+        self.jet_pt = jet_untrans['jet_PT']
+        self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yLabel)
+        self.fill_trans_hists(jet, track, tower, yLabel)
         jet_input, track_input, tower_input = self.sort_inputs(jet, track, tower)
         return jet_input, track_input, tower_input, yLabel
 
