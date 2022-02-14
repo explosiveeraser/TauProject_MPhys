@@ -79,17 +79,18 @@ class Plots():
         self.train_weights = train_weights
         self.legend = legend
 
-    def plot_efficiencies(self, sig_train, sig_eval, eff):
-        flat = Flattener(Plots.pt_bins, eff)
-        flat.fit(sig_train, self.train_pred_y)
 
-        pass_thr = flat.passes_thr(sig_eval, self.pred_y)
-
-        statistic, _, _ = binned_statistic(sig_eval, pass_thr, statistic=lambda arr: np.count_nonzero(arr) / float(len(arr)),
-                                           bins=flat.x_bins)
-        #plot
-        fig, ax = plt.subplots()
-        xx =
+    # def plot_efficiencies(self, sig_train, sig_eval, eff):
+    #     flat = Flattener(Plots.pt_bins, eff)
+    #     flat.fit(sig_train, self.train_pred_y)
+    #
+    #     pass_thr = flat.passes_thr(sig_eval, self.pred_y)
+    #
+    #     statistic, _, _ = binned_statistic(sig_eval, pass_thr, statistic=lambda arr: np.count_nonzero(arr) / float(len(arr)),
+    #                                        bins=flat.x_bins)
+    #     #plot
+    #     fig, ax = plt.subplots()
+    #     xx =
 
 
     # def plotScore(self, kwargs):

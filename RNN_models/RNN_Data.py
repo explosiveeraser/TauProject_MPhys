@@ -354,14 +354,18 @@ class RNN_Data():
         legendJ = []
         legendTr = []
         legendTo = []
+        jet_canvases = []
 
-        jet_canvas = ROOT.TCanvas("Jet_Inputs", "Jet_Inputs")
-        jet_canvas.Divide(9, 3)
-        jet_canvas.cd(0)
-        jet_canvas.cd(1)
+
         for key in tqdm({"jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
                     "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                     "jet_Ftrack_Iso"}):
+            c_i = 0
+            jet_canvas = ROOT.TCanvas("Jet_Inputs", "Jet_Inputs")
+            jet_canvas.Divide(2, 1)
+            jet_canvas.cd(c_i)
+            c_i += 1
+            jet_canvas.cd(c_i)
             for t in ["not_transformed", "transformed"]:
                 legendJ.append(ROOT.TLegend(0.05, 0.85, 0.2, 0.95))
                 if t == "not_transformed":
@@ -396,15 +400,21 @@ class RNN_Data():
                 legendJ[jet_i].Draw()
                 jet_canvas.Update()
                 jet_i += 1
-                jet_canvas.cd(jet_i + 1)
+                jet_canvas.cd(c_i + 1)
+            jet_canvas.Print("Jet_{}.pdf".format(key))
+            jet_canvases.append([key, jet_canvas])
         track_i = 0
-        track_canvas = ROOT.TCanvas("Track_Inputs", "Track_Inputs")
-        track_canvas.Divide(6, 3)
-        track_canvas.cd(0)
-        track_canvas.cd(1)
+
+        track_canvases = []
 
         for key in tqdm({"track_P", "track_PT", "track_L", "track_D0", "track_DZ", "track_deltaEta",
                     "track_deltaPhi", "track_deltaR"}):
+            track_canvas = ROOT.TCanvas("Track_Inputs", "Track_Inputs")
+            track_canvas.Divide(2, 1)
+            c_i = 0
+            track_canvas.cd(c_i)
+            c_i += 1
+            track_canvas.cd(c_i)
             for t in ["not_transformed", "transformed"]:
                 legendTr.append(ROOT.TLegend(0.05, 0.85, 0.2, 0.95))
                 if t == "not_transformed":
@@ -438,17 +448,22 @@ class RNN_Data():
                 legendTr[track_i].Draw()
                 track_canvas.Update()
                 track_i += 1
-                track_canvas.cd(track_i + 1)
+                track_canvas.cd(c_i + 1)
+            track_canvas.Print("Track_{}.pdf".format(key))
+            track_canvases.append([key, track_canvas])
 
         tower_i = 0
+        tower_canvases = []
 
-        tower_canvas = ROOT.TCanvas("Tower_Inputs", "Tower_Inputs")
-        tower_canvas.Divide(8, 4)
-        tower_canvas.cd(0)
-        tower_canvas.cd(1)
         for key in tqdm({"tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
                     "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi",
                     "tower_deltaR"}):
+            tower_canvas = ROOT.TCanvas("Tower_Inputs", "Tower_Inputs")
+            tower_canvas.Divide(2, 1)
+            c_i = 0
+            tower_canvas.cd(c_i)
+            c_i += 1
+            tower_canvas.cd(c_i)
             for t in ["not_transformed", "transformed"]:
                 legendTo.append(ROOT.TLegend(0.05, 0.85, 0.2, 0.95))
                 if t == "not_transformed":
@@ -482,11 +497,9 @@ class RNN_Data():
                 legendTo[tower_i].Draw()
                 tower_canvas.Update()
                 tower_i += 1
-                tower_canvas.cd(tower_i + 1)
-
-        jet_canvas.Print("Jet_Inputs.pdf")
-        track_canvas.Print("Track_Inputs.pdf")
-        tower_canvas.Print("Tower_Inputs.pdf")
+                tower_canvas.cd(c_i + 1)
+            tower_canvas.Print("Tower_{}.pdf".format(key))
+            tower_canvases.append([key, tower_canvas])
 
         input("Enter to continue")
         return True
