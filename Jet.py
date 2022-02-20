@@ -214,8 +214,8 @@ class Jet_():
         for track in self.Tracks:
             if track.CoreRegion:
                 core_track_p += track.P
-        for tower in most_em_towers:
-            Eem_tower += tower.Eem
+        for tower_em in most_em_towers:
+            Eem_tower += tower_em
         self.mass_trackplusEM = core_track_p + Eem_tower
 
     def Mass_Track_System(self):

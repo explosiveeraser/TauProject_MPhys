@@ -97,7 +97,7 @@ class Tau_Model():
         #self.RNN_ModelwoTowers()
 
     def basic_Model(self):
-        HL_input = Input(shape=(13,))
+        HL_input = Input(shape=(10,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer='RandomUniform',
                          bias_initializer='zeros')(HL_input)
         HLdense3 = Dense(16, activation='relu', kernel_initializer='RandomUniform',
@@ -115,7 +115,7 @@ class Tau_Model():
         unroll = False
 
         # HL Layers
-        HL_input = Input(shape=(13,))
+        HL_input = Input(shape=(10,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HL_input)
         HLdense2 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
@@ -159,7 +159,7 @@ class Tau_Model():
         unroll = False
 
         # HL Layers
-        HL_input = Input(shape=(13,))
+        HL_input = Input(shape=(10,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HL_input)
         HLdense2 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
@@ -167,10 +167,10 @@ class Tau_Model():
         HLdense3 = Dense(16, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HLdense2)
         # Track Layers
-        Track_input1 = Input(shape=(None, 8))
+        Track_input1 = Input(shape=(None, 5))
         maskedTrack = Masking()(Track_input1)
         # Track_input2 = Input(shape=(10,))
-        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, 8), kernel_initializer = 'RandomUniform',
+        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, 5), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
         trackDense2 = Dense(32, activation='relu', input_shape=(None, None, 32), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
@@ -183,19 +183,19 @@ class Tau_Model():
         trackLSTM2 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=False, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(trackLSTM1)
         # Tower Layers
-        Tower_input1 = Input(shape=(None, 14))
+        Tower_input1 = Input(shape=(None, 3))
         maskedTower = Masking()(Tower_input1)
         # Tower_input2 = Input(shape=(14,))
-        towerDense1 = Dense(32, activation='relu', input_shape=(None, None, 14), kernel_initializer = 'RandomUniform',
+        towerDense1 = Dense(32, activation='relu', input_shape=(None, None, 3), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
-        towerDense2 = Dense(32, activation='relu', input_shape=(None, None, 14), kernel_initializer = 'RandomUniform',
+        towerDense2 = Dense(32, activation='relu', input_shape=(None, None, 32), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
         towerSD1 = TimeDistributed(towerDense1)(maskedTower)
         towerSD2 = TimeDistributed(towerDense2)(towerSD1)
         # towerFlatten = TimeDistributed(Flatten())(towerSD2)
-        towerLSTM1 = LSTM(24, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 14), return_sequences=True, kernel_initializer = 'RandomUniform',
+        towerLSTM1 = LSTM(24, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(towerSD2)
-        towerLSTM2 = LSTM(24, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 14), return_sequences=False, kernel_initializer = 'RandomUniform',
+        towerLSTM2 = LSTM(24, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 24), return_sequences=False, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(towerLSTM1)
         # Layers Merged
         mergedLayer = Concatenate()([trackLSTM2, towerLSTM2, HLdense3])

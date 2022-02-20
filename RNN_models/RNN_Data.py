@@ -44,6 +44,15 @@ from root_numpy import tree2array
 
 class RNN_Data():
 
+    jet_keys = {"jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
+                "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
+                , "jet_mass_track_system"}
+
+    track_keys = {"track_PT", "track_D0", "track_DZ", "track_deltaEta",
+                    "track_deltaPhi"}
+
+    tower_keys = {"tower_ET", "tower_deltaEta", "tower_deltaPhi"}
+
     def __init__(self, Prongs, load_pickled_data, pickle_file, print_hists=True, BacktreeFile="", BackTreeName="",  SignaltreeFile="", SignalTreeName="", BackendPartOfTree="", SignalendPartOfTree=""):
         self.prong = Prongs
         self.dicts_file = "input_dicts"
@@ -214,18 +223,20 @@ class RNN_Data():
         track_input = []
         tower_input = []
         for idx in trange(0, len(jet_dict["jet_PT"])):
-            temp = [jet_dict["jet_PT"][idx], jet_dict["jet_Eta"][idx], jet_dict["jet_Phi"][idx], jet_dict["jet_deltaEta"][idx], jet_dict["jet_deltaPhi"][idx],
-                    jet_dict["jet_deltaR"][idx], jet_dict["jet_charge"][idx], jet_dict["jet_NCharged"][idx], jet_dict["jet_NNeutral"][idx], jet_dict["jet_f_cent"][idx],
-                    jet_dict["jet_iF_leadtrack"][idx], jet_dict["jet_max_deltaR"][idx], jet_dict["jet_Ftrack_Iso"][idx]]
+            temp = [jet_dict["jet_PT"][idx], jet_dict["jet_PT_LC_scale"][idx], jet_dict["jet_f_cent"][idx],
+                    jet_dict["jet_iF_leadtrack"][idx], jet_dict["jet_max_deltaR"][idx], jet_dict["jet_Ftrack_Iso"][idx],
+                    jet_dict["jet_ratio_ToEem_P"][idx], jet_dict["jet_frac_trEM_pt"][idx], jet_dict["jet_mass_track_EM_system"][idx],
+                    jet_dict["jet_mass_track_system"][idx]]
             jet_input.append(np.asarray(temp).astype(np.float32))
         for idx in trange(0, len(track_dict["track_PT"])):
             temp1 = []
             index_track_sorted = sorted(range(len(track_dict["track_PT"][idx])),
                                         key=lambda k: track_dict["track_PT"][idx][k], reverse=True)
             for jdx in index_track_sorted:
-                temp2 = [track_dict["track_P"][idx][jdx], track_dict["track_PT"][idx][jdx], track_dict["track_L"][idx][jdx], track_dict["track_D0"][idx][jdx], track_dict["track_DZ"][idx][jdx],
-                         track_dict["track_deltaEta"][idx][jdx], track_dict["track_deltaPhi"][idx][jdx], track_dict["track_deltaR"][idx][jdx]]
-                if np.isnan(temp2[0]) or np.isnan(temp2[1]) or np.isnan(temp2[2]) or np.isnan(temp2[3]) or np.isnan(temp2[4]) or np.isnan(temp2[5]) or np.isnan(temp2[6]) or np.isnan(temp2[7]):
+                temp2 = [track_dict["track_PT"][idx][jdx], track_dict["track_D0"][idx][jdx],
+                         track_dict["track_DZ"][idx][jdx], track_dict["track_deltaEta"][idx][jdx],
+                         track_dict["track_deltaPhi"][idx][jdx]]
+                if np.isnan(temp2[0]) or np.isnan(temp2[1]) or np.isnan(temp2[2]) or np.isnan(temp2[3]) or np.isnan(temp2[4]):
                     temp2 = np.zeros((len(temp2)), dtype=np.float32)
                 temp1.append(np.asarray(temp2).astype(np.float32))
             track_input.append(np.array(temp1))
@@ -234,14 +245,9 @@ class RNN_Data():
             index_tower_sorted = sorted(range(len(tower_dict["tower_ET"][idx])), key=lambda k: tower_dict["tower_ET"][idx][k],
                                         reverse=True)
             for jdx in index_tower_sorted:
-                temp2 = [tower_dict["tower_E"][idx][jdx], tower_dict["tower_ET"][idx][jdx], tower_dict["tower_Eta"][idx][jdx], tower_dict["tower_Phi"][idx][jdx],
-                         tower_dict["tower_Edges0"][idx][jdx], tower_dict["tower_Edges1"][idx][jdx], tower_dict["tower_Edges2"][idx][jdx], tower_dict["tower_Edges3"][idx][jdx]
-                         , tower_dict["tower_Eem"][idx][jdx], tower_dict["tower_Ehad"][idx][jdx], tower_dict["tower_T"][idx][jdx], tower_dict["tower_deltaEta"][idx][jdx],
-                         tower_dict["tower_deltaPhi"][idx][jdx], tower_dict["tower_deltaR"][idx][jdx]]
-                if np.isnan(temp2[0]) or np.isnan(temp2[1]) or np.isnan(temp2[2]) or np.isnan(temp2[3]) or np.isnan(
-                        temp2[4]) or np.isnan(temp2[5]) or np.isnan(temp2[6]) or np.isnan(temp2[7]) or np.isnan(
-                        temp2[8]) or np.isnan(temp2[9]) or np.isnan(temp2[10]) or np.isnan(temp2[11]) or np.isnan(
-                        temp2[12]) or np.isnan(temp2[13]):
+                temp2 = [tower_dict["tower_ET"][idx][jdx], tower_dict["tower_deltaEta"][idx][jdx],
+                         tower_dict["tower_deltaPhi"][idx][jdx]]
+                if np.isnan(temp2[0]) or np.isnan(temp2[1]) or np.isnan(temp2[2]):
                     temp2 = np.zeros((len(temp2)), dtype=np.float32)
                 temp1.append(np.asarray(temp2).astype(np.float32))
             tower_input.append(np.array((temp1)))
@@ -251,13 +257,11 @@ class RNN_Data():
         return jet_input, track_input, tower_input
 
     def fill_untrans_hists(self, jet, track, tower, label):
-        if not os.path.exists("{}_untransformed_data".format(self.prong)):
+        if os.path.exists("{}_untransformed_data".format(self.prong)):
             file = open("{}_untransformed_data".format(self.prong), "wb")
             pickle.dump([track, tower, jet, label], file)
             file.close()
-        for key in tqdm({"jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
-                    "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
-                    "jet_Ftrack_Iso"}):
+        for key in tqdm(RNN_Data.jet_keys):
             min_val = np.min(jet[key].flatten().flatten())
             max_val = np.max(jet[key].flatten().flatten())
             for l in [0, 1]:
@@ -268,8 +272,7 @@ class RNN_Data():
                 self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 35,
                                                                     min_val, max_val)
                 rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
-        for key in tqdm({"track_P", "track_PT", "track_L", "track_D0", "track_DZ", "track_deltaEta",
-                    "track_deltaPhi", "track_deltaR"}):
+        for key in tqdm(RNN_Data.track_keys):
             a = track[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
@@ -283,9 +286,7 @@ class RNN_Data():
                                                                     35, min_val,
                                                                     max_val)
                 rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
-        for key in tqdm({"tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
-                    "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi",
-                    "tower_deltaR"}):
+        for key in tqdm(RNN_Data.tower_keys):
             a = tower[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
@@ -305,9 +306,7 @@ class RNN_Data():
             file = open("{}_transformed_data".format(self.prong), "wb")
             pickle.dump([track, tower, jet, label], file)
             file.close()
-        for key in tqdm({"jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
-                    "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
-                    "jet_Ftrack_Iso"}):
+        for key in tqdm(RNN_Data.jet_keys):
             min_val = np.min(jet[key].flatten().flatten())
             max_val = np.max(jet[key].flatten().flatten())
             for l in [0, 1]:
@@ -318,8 +317,7 @@ class RNN_Data():
                 self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 35,
                                                                     min_val, max_val)
                 rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
-        for key in tqdm({"track_P", "track_PT", "track_L", "track_D0", "track_DZ", "track_deltaEta",
-                    "track_deltaPhi", "track_deltaR"}):
+        for key in tqdm(RNN_Data.track_keys):
             a = track[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
@@ -332,9 +330,7 @@ class RNN_Data():
                                                                     35, min_val,
                                                                     max_val)
                 rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
-        for key in tqdm({"tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
-                    "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi",
-                    "tower_deltaR"}):
+        for key in tqdm(RNN_Data.tower_keys):
             a = tower[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
@@ -357,9 +353,7 @@ class RNN_Data():
         jet_canvases = []
 
 
-        for key in tqdm({"jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
-                    "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
-                    "jet_Ftrack_Iso"}):
+        for key in tqdm(RNN_Data.jet_keys):
             c_i = 0
             jet_canvas = ROOT.TCanvas("Jet_Inputs", "Jet_Inputs")
             jet_canvas.Divide(2, 1)
@@ -407,8 +401,7 @@ class RNN_Data():
 
         track_canvases = []
 
-        for key in tqdm({"track_P", "track_PT", "track_L", "track_D0", "track_DZ", "track_deltaEta",
-                    "track_deltaPhi", "track_deltaR"}):
+        for key in tqdm(RNN_Data.track_keys):
             track_canvas = ROOT.TCanvas("Track_Inputs", "Track_Inputs")
             track_canvas.Divide(2, 1)
             c_i = 0
@@ -455,9 +448,7 @@ class RNN_Data():
         tower_i = 0
         tower_canvases = []
 
-        for key in tqdm({"tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
-                    "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi",
-                    "tower_deltaR"}):
+        for key in tqdm(RNN_Data.tower_keys):
             tower_canvas = ROOT.TCanvas("Tower_Inputs", "Tower_Inputs")
             tower_canvas.Divide(2, 1)
             c_i = 0
@@ -513,9 +504,9 @@ class RNN_Data():
         jet_untrans = {}
         track_untrans = {}
         tower_untrans = {}
-        for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR",
-                         "jet_charge", "jet_NCharged", "jet_NNeutral", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
-                         "jet_Ftrack_Iso", "nTrack", "nTower"]):
+        for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
+                         "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system",
+                              "jet_mass_track_system", "nTrack", "nTower"]):
             if jet_var != "jet_TruthTau":
                 backjet = tree2array(backtree, branches=[jet_var]).astype(np.float32)
                 sigjet = tree2array(sigtree, branches=[jet_var]).astype(np.float32)
@@ -527,7 +518,7 @@ class RNN_Data():
                     max_nTower = int(np.max(jet["nTower"]))
                 #if jet_var in ["jet_deltaEta", "jet_deltaPhi"]:
                  #   jet[jet_var] = self.abs_var(jet[jet_var])
-                if jet_var in ["jet_PT", "jet_Eta", "jet_Phi", "jet_charge", "jet_f_cent", "jet_iF_leadtrack"]:
+                if jet_var in ["jet_PT", "jet_f_cent", "jet_iF_leadtrack"]:
                     if jet_var in ["jet_PT", "jet_f_cent", "jet_iF_leadtrack"]:
                         if jet_var in ["jet_PT"]:
                             self.sig_pt = sigjet
@@ -538,23 +529,18 @@ class RNN_Data():
                                 if jet[jet_var][idx] < 0.:
                                     jet[jet_var][idx] = random.uniform(0.5, 1.)*(5869*2)**(random.uniform(1., 2.))
                             jet[jet_var] = self.log_epsilon(jet[jet_var], epsilon=1e-6)
-                    if jet_var in ["jet_charge"]:
-                        jet[jet_var] = self.abs_var(jet[jet_var])
-                    if jet_var in ["jet_Eta", "jet_Phi"]:
-                        jet[jet_var] = self.abs_var(jet[jet_var])
-                if jet_var in ["jet_PT", "jet_Eta", "jet_Phi", "jet_deltaEta", "jet_deltaPhi", "jet_deltaR","jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
-                         "jet_Ftrack_Iso"]:
+                if jet_var in ["jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
+                "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
+                , "jet_mass_track_system"]:
                     jet[jet_var] = self.preprocess(jet_var, jet[jet_var], self.scale_flat)
-                elif jet_var in ["jet_charge", "jet_NCharged", "jet_NNeutral"]:
-                    jet[jet_var] = self.preprocess(jet_var, jet[jet_var], self.min_max_scale)
             elif jet_var == "jet_TruthTau":
                 backlabel = tree2array(backtree, branches=["jet_TruthTau"]).astype(np.float32)
                 siglabel = tree2array(sigtree, branches=["jet_TruthTau"]).astype(np.float32)
                 yLabel = np.append(backlabel, siglabel, axis=0)
         max_nTower = 100
         max_nTrack = 100
-        for track_var in tqdm(["track_P", "track_PT", "track_Eta", "track_Phi", "track_L", "track_D0", "track_DZ", "track_deltaEta",
-                          "track_deltaPhi", "track_deltaR"]):
+        for track_var in tqdm(["track_PT", "track_D0", "track_DZ", "track_deltaEta",
+                          "track_deltaPhi"]):
             backtrack = tree2array(backtree, branches=[track_var])
             sigtrack = tree2array(sigtree, branches=[track_var])
             temp_arr = np.append(backtrack, sigtrack, axis=0)
@@ -570,20 +556,19 @@ class RNN_Data():
             track_untrans[track_var] = new_arr
             if track_var == "track_PT":
                 track_PT = track["track_PT"]
-            if track_var in ["track_P", "track_PT", "track_L", "track_D0", "track_DZ"]:
-                if track_var in ["track_P", "track_PT", "track_L"]:
+            if track_var in ["track_PT", "track_D0", "track_DZ"]:
+                if track_var in ["track_PT"]:
                     track[track_var] = self.log_epsilon(track[track_var])
                     track[track_var] = self.preprocess(track_var, track[track_var], partial(self.scale, per_obj=False))
                 if track_var in ["track_D0", "track_DZ"]:
                     track[track_var] = self.abs_log_epsilon(track[track_var], epsilon=0.000001)
                     track[track_var] = self.preprocess(track_var, track[track_var], partial(self.scale, per_obj=False))
-            if track_var in ["track_deltaEta", "track_deltaPhi", "track_deltaR"]:
+            if track_var in ["track_deltaEta", "track_deltaPhi"]:
                 track[track_var] = self.abs_var(track[track_var])
                 track[track_var] = self.preprocess(track_var, track[track_var], partial(self.constant_scale, scale=0.6))
    #     print(sorted(range(len(track["track_PT"][3])), key=lambda k: track["track_PT"][3][k], reverse=True))
   #      print(sorted(range(len(track_PT[3])), key=lambda k: track_PT[3][k], reverse=True))
-        for tower_var in tqdm(["tower_E", "tower_ET", "tower_Eta", "tower_Phi", "tower_Edges0", "tower_Edges1", "tower_Edges2",
-                          "tower_Edges3", "tower_Eem", "tower_Ehad", "tower_T", "tower_deltaEta", "tower_deltaPhi", "tower_deltaR"]):
+        for tower_var in tqdm(["tower_ET", "tower_deltaEta", "tower_deltaPhi"]):
             backtower = tree2array(backtree, branches=[tower_var])
             sigtower = tree2array(sigtree, branches=[tower_var])
             temp_arr = np.append(backtower, sigtower, axis=0)
@@ -599,23 +584,16 @@ class RNN_Data():
             tower_untrans[tower_var] = new_arr
             if tower_var == "tower_ET":
                 tower_ET = tower["tower_ET"]
-            if tower_var in ["tower_E", "tower_ET", "tower_Eem", "tower_Ehad", "tower_T"]:
-                if tower_var in ["tower_E", "tower_ET"]:
+            if tower_var in ["tower_ET"]:
+                if tower_var in ["tower_ET"]:
                     tower[tower_var] = self.log_epsilon(tower[tower_var])
-                elif tower_var in ["tower_Eem", "tower_Ehad"]:
-                    tower[tower_var] = self.log_epsilon(tower[tower_var], epsilon=0.000001)
-                elif tower_var in ["tower_T"]:
-                    tower[tower_var] = self.log_epsilon(tower[tower_var])
-                tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.scale, per_obj=False))
-            if tower_var in ["tower_Eta", "tower_Phi"]:
-                tower[tower_var] = self.abs_var(tower[tower_var])
                 tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.scale, per_obj=False))
             if tower_var in ["tower_deltaEta", "tower_deltaPhi", "tower_deltaR"]:
                 tower[tower_var] = self.abs_var(tower[tower_var])
                 tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.constant_scale, scale=0.6))
-            if tower_var in ["Edges0", "Edges1", "Edges2", "Edges3"]:
-                tower[tower_var] = self.abs_var(tower[tower_var]+np.amax(tower[tower_var]))
-                tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.min_max_scale, per_obj=False))
+            # if tower_var in ["Edges0", "Edges1", "Edges2", "Edges3"]:
+            #     tower[tower_var] = self.abs_var(tower[tower_var]+np.amax(tower[tower_var]))
+            #     tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.min_max_scale, per_obj=False))
        # print(sorted(range(len(tower["tower_ET"][3])), key=lambda k: tower["tower_ET"][3][k], reverse=True))
       #  print(sorted(range(len(tower_ET[3])), key=lambda k: tower_ET[3][k], reverse=True))
         file = open(self.dicts_file, "wb")
