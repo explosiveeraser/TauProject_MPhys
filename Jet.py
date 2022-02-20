@@ -57,6 +57,11 @@ class Jet_():
         self.Inverse_MomFrac_LeadTrack()
         self.Maximum_deltaR()
         self.F_IsoTracks()
+        self.PT_LC_scale()
+        self.ratio_ToEem_P()
+        self.frac_trEM_pt()
+        self.mass_track_EM_system()
+        self.Mass_Track_System()
 
     def _Find_Particles(self, evt_particles):
         num_particles = len(evt_particles)
@@ -101,6 +106,14 @@ class Jet_():
                 check_to.Jet_Association(self.Eta, self.Phi)
                 self.Towers.append(check_to)
                 self.num_towers += 1
+
+    def PT_LC_scale(self):
+        pt_lc_scale = 0.
+        for tower in self.Towers:
+            if tower.CoreRegion:
+                pt_lc_scale += tower.ET
+        self.pt_lc_scale = pt_lc_scale
+
 
     #may use Eem instead of ET
     def Central_Energy_Fraction(self, deltaR1=0.1, deltaR2=0.2):
@@ -157,6 +170,60 @@ class Jet_():
             self.Ftrack_Iso = Iso_PT/All_PT
         else:
             self.Ftrack_Iso = 10000.
+
+    def ratio_ToEem_P(self):
+        sum_Eem = 0.
+        core_pt = 0.
+        for tower in self.Towers:
+            sum_Eem += tower.Eem
+        for track in self.Tracks:
+            if track.CoreRegion:
+                core_pt += track.P
+        if abs(core_pt) > 0.:
+            self.ratio_Eem_P = sum_Eem/core_pt
+        elif core_pt == 0.:
+            self.ratio_Eem_P = 10000.
+
+    def frac_trEM_pt(self):
+        core_track_pt = 0.
+        Eem_tower = 0.
+        most_em_towers = [0., 0.]
+        for tower in self.Towers:
+            if tower.CoreRegion:
+                if tower.Eem > most_em_towers[0]:
+                    most_em_towers[0] = tower.Eem
+                elif tower.Eem > most_em_towers[1]:
+                    most_em_towers[1] = tower.Eem
+        for towerEem in most_em_towers:
+            Eem_tower += towerEem
+        for track in self.Tracks:
+            if track.CoreRegion:
+                core_track_pt += track.PT
+        self.frac_trEM_jet_pt = (core_track_pt+Eem_tower)/self.PT
+
+    def mass_track_EM_system(self):
+        core_track_p = 0.
+        Eem_tower = 0.
+        most_em_towers = [0., 0.]
+        for tower in self.Towers:
+            if tower.CoreRegion:
+                if tower.Eem > most_em_towers[0]:
+                    most_em_towers[0] = tower.Eem
+                elif tower.Eem > most_em_towers[1]:
+                    most_em_towers[1] = tower.Eem
+        for track in self.Tracks:
+            if track.CoreRegion:
+                core_track_p += track.P
+        for tower in most_em_towers:
+            Eem_tower += tower.Eem
+        self.mass_trackplusEM = core_track_p + Eem_tower
+
+    def Mass_Track_System(self):
+        core_track_p = 0.
+        for track in self.Tracks:
+            core_track_p += track.P
+        self.mass_of_system = core_track_p
+
 
 
 
