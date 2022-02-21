@@ -264,7 +264,8 @@ class Tau_Model():
 
     def predict(self, model):
         self.predictions = model.predict(self.eval_inputs)
-        return self.eval_y, self.predictions
+        jet_pt = self.eval_inputs[2][:, 0]
+        return self.eval_y, self.predictions, jet_pt
 
     def get_score_weights(self):
         sig = self.eval_jet_pt[self.eval_sigbck_index == 's']

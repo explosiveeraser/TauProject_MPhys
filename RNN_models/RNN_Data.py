@@ -256,8 +256,23 @@ class RNN_Data():
         tower_input = np.array(tower_input)
         return jet_input, track_input, tower_input
 
+    # untrans_jet_PT_bins = np.array([10., 25.178, 31.697, 39.905, 50.237, 63.245, 79.621, 100.000,
+    #     130.000, 200.000, 316.978, 502.377, 796.214, 1261.914, 2000.000,
+    #     1000000.000])
+    #
+    # untrans_jet_PT_LCscale_bins = np.array([10., 25.178, 31.697, 39.905, 50.237, 63.245, 79.621, 100.000,
+    #                130.000, 200.000, 316.978, 502.377, 796.214, 1261.914, 2000.000,
+    #                1000000.000])
+    #
+    # trans_jet_PT_LCscale_bins = np.array([10., 25.178, 31.697, 39.905, 50.237, 63.245, 79.621, 100.000,
+    #                                         130.000, 200.000, 316.978, 502.377, 796.214, 1261.914, 2000.000,
+    #                                         1000000.000]) / 250.
+    #
+    # untrans_f_cent_bins = np.log10(np.arange(50) * 1000)
+
+
     def fill_untrans_hists(self, jet, track, tower, label):
-        if os.path.exists("{}_untransformed_data".format(self.prong)):
+        if not os.path.exists("{}_untransformed_data".format(self.prong)):
             file = open("{}_untransformed_data".format(self.prong), "wb")
             pickle.dump([track, tower, jet, label], file)
             file.close()
@@ -565,6 +580,7 @@ class RNN_Data():
                     track[track_var] = self.preprocess(track_var, track[track_var], partial(self.scale, per_obj=False))
             if track_var in ["track_deltaEta", "track_deltaPhi"]:
                 track[track_var] = self.abs_var(track[track_var])
+                track_untrans[track_var] = self.abs_var(track_untrans[track_var])
                 track[track_var] = self.preprocess(track_var, track[track_var], partial(self.constant_scale, scale=0.6))
    #     print(sorted(range(len(track["track_PT"][3])), key=lambda k: track["track_PT"][3][k], reverse=True))
   #      print(sorted(range(len(track_PT[3])), key=lambda k: track_PT[3][k], reverse=True))
@@ -590,6 +606,7 @@ class RNN_Data():
                 tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.scale, per_obj=False))
             if tower_var in ["tower_deltaEta", "tower_deltaPhi", "tower_deltaR"]:
                 tower[tower_var] = self.abs_var(tower[tower_var])
+                tower_untrans[tower_var] = self.abs_var(tower_untrans[tower_var])
                 tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.constant_scale, scale=0.6))
             # if tower_var in ["Edges0", "Edges1", "Edges2", "Edges3"]:
             #     tower[tower_var] = self.abs_var(tower[tower_var]+np.amax(tower[tower_var]))

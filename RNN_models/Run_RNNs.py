@@ -41,7 +41,7 @@ import root_numpy as rn
 from Plots import Plots
 
 
-DataP1 = RNN_Data(1, False, "prong1_data", print_hists=True, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
+DataP1 = RNN_Data(1, True, "prong1_data", print_hists=False, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 
@@ -70,11 +70,15 @@ if do_RNN:
     train_real_y, train_pred_y = Prong1Model.get_train_scores(Prong1Model.RNNmodel)
     train_weights = Prong1Model.get_train_score_weights()
 
-    real_y, pred_y = Prong1Model.predict(Prong1Model.RNNmodel)
+    real_y, pred_y, jet_pt = Prong1Model.predict(Prong1Model.RNNmodel)
     #print(pred_y)
     weights = Prong1Model.get_score_weights()
 
-    Prong1Plots = Plots(real_y, pred_y, weights, train_real_y, train_pred_y, train_weights)
+    Prong1Plots = Plots(real_y, pred_y, weights, train_real_y, train_pred_y, train_weights, jet_pt)
+
+    Prong1Plots.plot_raw_score_vs_jetPT()
+    Prong1Plots.histogram_RNN_score()
+
     prong1_rejveff = Prong1Plots.plot_rej_vs_eff()
     plt.draw()
     plt.show()

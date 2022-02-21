@@ -69,7 +69,7 @@ class Plots():
     ])
 
 
-    def __init__(self, real_y, pred_y, weights, train_y, train_pred_y, train_weights, legend=True, ylim=(1, 1e7)):
+    def __init__(self, real_y, pred_y, weights, train_y, train_pred_y, train_weights, jet_pt, legend=True, ylim=(1, 1e7)):
         self.real_y = real_y
         self.pred_y = pred_y
         self.ylim = ylim
@@ -77,7 +77,75 @@ class Plots():
         self.train_y = train_y
         self.train_pred_y = train_pred_y
         self.train_weights = train_weights
+        self.jet_pt = jet_pt
         self.legend = legend
+
+    def plot_raw_score_vs_jetPT(self):
+        fig, ax = plt.subplots(2)
+        y = []
+        pt = []
+        for i in trange(0, len(self.pred_y)):
+            y.append(self.pred_y[i,0])
+            pt.append(self.jet_pt[i])
+        ax[0].hist2d(y, pt, bins=100)
+        ax[1].hist2d(y, pt, bins=100, weights=self.weights)
+        plt.show()
+
+
+    def histogram_RNN_score(self):
+        canvas = ROOT.TCanvas("RNN Scores")
+        canvas.Divide(2,1)
+        true_hist = ROOT.TH1D("Raw_RNN_score_trueTaus", "Raw_RNN_score_trueTaus", 50, 0., 1.)
+        fake_hist = ROOT.TH1D("Raw_RNN_score_fakeTaus", "Raw_RNN_score_fakeTaus", 50, 0., 1.)
+        true_hist_reweight = ROOT.TH1D("Reweight_RNN_score_trueTaus", "Reweight_RNN_score_trueTaus", 50, 0., 1.)
+        fake_hist_reweight = ROOT.TH1D("Reweight_RNN_score_fakeTaus", "Reweight_RNN_score_fakeTaus", 50, 0., 1.)
+
+    #    new_eff, _ = self.roc(self.real_y, self.pred_y)
+
+   #     eff = new_eff[:][0]
+
+  #      true_hist_test = ROOT.TH1D("TEST_rew_RNN_score_trueTaus", "TEST_rew_RNN_score_trueTaus", 50, 0., 1.)
+   #     fake_hist_test = ROOT.TH1D("TEST_rew_RNN_score_fakeTaus", "TEST_rew_RNN_score_fakeTaus", 50, 0., 1.)
+
+        for i in trange(0, len(self.pred_y)):
+            if self.real_y[i] == 0.:
+                fake_hist.Fill(self.pred_y[i])
+                fake_hist_reweight.Fill(self.pred_y[i], self.weights[i])
+           #     fake_hist_test.Fill(eff[i][0])
+            elif self.real_y[i] == 1.:
+                true_hist.Fill(self.pred_y[i])
+                true_hist_reweight.Fill(self.pred_y[i], self.weights[i])
+          #      true_hist_test.Fill(eff[i][0])
+
+        fake_hist_integral = fake_hist.Integral()
+        true_hist_integral = true_hist.Integral()
+        fake_hist.Scale(1/fake_hist_integral)
+        true_hist.Scale(1/true_hist_integral)
+
+        fake_hist_reweight_integral = fake_hist_reweight.Integral()
+        true_hist_reweight_integral = true_hist_reweight.Integral()
+        fake_hist_reweight.Scale(1/fake_hist_reweight_integral)
+        true_hist_reweight.Scale(1/true_hist_reweight_integral)
+
+        # fake_hist_test_integral = fake_hist_test.Integral()
+        # true_hist_test_integral = true_hist_test.Integral()
+        # fake_hist_test.Scale(1/fake_hist_test_integral)
+        # true_hist_test.Scale(1/true_hist_test_integral)
+
+        canvas.cd(1)
+        fake_hist.Draw('HIST')
+        true_hist.SetLineColor(ROOT.kRed)
+        true_hist.Draw('HIST SAMES0')
+        canvas.cd(2)
+        fake_hist_reweight.Draw('HIST')
+        true_hist_reweight.SetLineColor(ROOT.kRed)
+        true_hist_reweight.Draw('HIST SAMES0')
+        # canvas.cd(3)
+        # fake_hist_test.Draw('HIST')
+        # true_hist_test.SetLineColor(ROOT.kRed)
+        # true_hist_test.Draw('HIST SAMES0')
+        canvas.Update()
+        canvas.Print("histogram_RNN_score.pdf")
 
 
     # def plot_efficiencies(self, sig_train, sig_eval, eff):
