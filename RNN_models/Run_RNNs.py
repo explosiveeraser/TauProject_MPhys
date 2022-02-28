@@ -41,7 +41,7 @@ import root_numpy as rn
 from Plots import Plots
 
 
-DataP1 = RNN_Data(1, True, "prong1_data", print_hists=False, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
+DataP1 = RNN_Data(1, False, "prong1_data", print_hists=True, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 
@@ -53,11 +53,11 @@ do_RNN = True
 
 
 if do_RNN:
-    Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:6,:], DataP1.input_tower[:,0:10,:], DataP1.input_jet[:, 1:12]], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain)
+    Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:6,:], DataP1.input_tower[:,0:10,:], DataP1.input_jet[:, 1:12]], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain, DataP1.new_weights)
 
     #Prong1Model.Model_Fit(256, 40, 0.3, model=Prong1Model.basic_model, inputs=[Prong1Model.inputs[2]])
     #Prong1Model.Model_Fit(256, 40, 0.3, model=Prong1Model.RNNmodel_woTower, inputs=[Prong1Model.inputs[0], Prong1Model.inputs[2]])
-    Prong1Model.Model_Fit(256, 10, 0.1)
+    Prong1Model.Model_Fit(256, 1000, 0.1)
 
     #Prong1Model.evaluate_model([DataP1.all_track[:, 0:6, :], DataP1.all_tower[:,0:10,:], DataP1.all_jet], DataP1.all_label, Prong1Model.RNNmodel)
 
@@ -82,9 +82,9 @@ if do_RNN:
 
     back_real_y, back_pred_y, back_jet_pt = Prong1Model.predict_back(Prong1Model.RNNmodel)
 
-    weights = Prong1Model.get_score_weights()
+    #weights = Prong1Model.get_score_weights()
 
-    Prong1Plots = Plots( "Prong1Plots", real_y, pred_y, weights, train_real_y, train_pred_y, train_weights, jet_pt)
+    Prong1Plots = Plots( "Prong1Plots", real_y, pred_y, Prong1Model.eval_w, train_real_y, train_pred_y, train_weights, jet_pt)
 
     back_plots = Plots("P1_backplots", back_real_y, back_pred_y, Prong1Model.eval_back_w, train_real_y, train_pred_y, train_weights, back_jet_pt)
 

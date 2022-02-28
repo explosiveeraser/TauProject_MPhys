@@ -13,10 +13,11 @@ from tqdm import tqdm, trange
 
 class Track_():
 
-    def __init__(self, entry, idx, event, track_obj, track_particle, hists=True):
+    def __init__(self, entry, idx, event, weight, track_obj, track_particle, hists=True):
         self.entry = entry
         self.idx = idx
         self.event = event
+        self.weight = weight
         if hists:
             self.track_obj = track_obj
         else:

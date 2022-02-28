@@ -178,8 +178,10 @@ class Plots():
     #     fig, ax = plt.subplots()
     #     ax.hist(self.tr)
 
-    def roc(self, y_true, y, **kwargs):
-        fpr, tpr, thr = roc_curve(y_true, y, **kwargs)
+    def roc(self, y_true, y):
+        #**kwargs
+        #fpr, tpr, thr = roc_curve(y_true, y, **kwargs)
+        fpr, tpr, thr = roc_curve(y_true, y)
         nonzero = fpr != 0
         eff, rej = tpr[nonzero], 1.0 / fpr[nonzero]
 
@@ -201,7 +203,8 @@ class Plots():
         return eff, ratio
 
     def plot_rej_vs_eff(self):
-        eff, rej = self.roc(self.real_y, self.pred_y, sample_weight=self.weights)
+        #eff, rej = self.roc(self.real_y, self.pred_y, sample_weight=self.weights)
+        eff, rej = self.roc(self.real_y, self.pred_y)
         fig, ax = plt.subplots()
         ax.plot(eff, rej, color='g', label='Delphes Tau RNN')
         ax.set_ylim(self.ylim)

@@ -63,8 +63,10 @@ class Signal(Dataset):
         print("Reading in physics objects.")
         for entry in trange(self._nev, desc="Signal Jet (wTrack) Event Loop."):
             self._reader.ReadEntry(entry)
-            weight = self._branchReader["Weight"].At(0).Weight
+            #weight = self._branchReader["Weight"].At(0).Weight
             evt = self._branchReader["Event"].At(0)
+            #weight = event cross section
+            weight = evt.CrossSection
             num_Jets = self._branchReader["Jet"].GetEntries()
             self.Tau_Tagger.append([])
             tracks = []
@@ -79,7 +81,7 @@ class Signal(Dataset):
                 particles.append(evt_particle)
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
-                evt_track = Track_(entry, jdx, evt, track, track.Particle.GetObject(), hists=print_hist)
+                evt_track = Track_(entry, jdx, evt, weight, track, track.Particle.GetObject(), hists=print_hist)
                 tracks.append(evt_track)
             for kdx in range(0, num_towers):
                 tower = self._branchReader["Tower"].At(kdx)
@@ -126,7 +128,7 @@ class Signal(Dataset):
             MaxNtower = 500
             jet_entry = array('i', [0])
             jet_index = array('i', [0])
-            jet_weight = array('f', [0.])
+            jet_cross_section = array('f', [0.])
             jet_PT = array('f', [0.])
             jet_PT_LC_scale = array('f', [0.])
             jet_f_cent = array('f', [0.])
@@ -142,6 +144,7 @@ class Signal(Dataset):
             nTrack = array('i', [0])
             nTower = array('i', [0])
             track_entry = array('i', MaxNtrack * [0])
+            track_cross_section = array('f', MaxNtrack * [0.])
             track_PT = array('f', MaxNtrack * [0.])
             track_index = array('i', MaxNtrack * [0])
             track_D0 = array('f', MaxNtrack * [0.])
@@ -149,6 +152,7 @@ class Signal(Dataset):
             track_deltaEta = array('f', MaxNtrack * [0.])
             track_deltaPhi = array('f', MaxNtrack * [0.])
             tower_entry = array('i', MaxNtower * [0])
+            tower_cross_section = array('f', MaxNtower * [0.])
             tower_ET = array('f', MaxNtower * [0.])
             tower_Edges0 = array('f', MaxNtower * [0.])
             tower_Edges1 = array('f', MaxNtower * [0.])
@@ -160,7 +164,7 @@ class Signal(Dataset):
             tree = ROOT.TTree(fname, str(fname + "_" + prong + " Tree"))
             tree.Branch("jet_entry", jet_entry, "jet_entry/I")
             tree.Branch("jet_index", jet_index, "jet_index/I")
-            tree.Branch("jet_weight", jet_weight, "jet_weight/F")
+            tree.Branch("jet_cross_section", jet_cross_section, "jet_cross_section/F")
             tree.Branch("jet_PT", jet_PT, "jet_PT/F")
             tree.Branch("jet_PT_LC_scale", jet_PT_LC_scale, "jet_PT_LC_scale/F")
             tree.Branch("jet_f_cent", jet_f_cent, "jet_f_cent/F")
@@ -175,6 +179,7 @@ class Signal(Dataset):
             tree.Branch("nTrack", nTrack, "nTrack/I")
             tree.Branch("nTower", nTower, "nTower/I")
             tree.Branch("track_entry", track_entry, "track_entry[nTrack]/I")
+            tree.Branch("track_cross_section", track_cross_section, "track_cross_section[nTrack]/I")
             tree.Branch("track_index", track_index, "track_index[nTrack]/I")
             tree.Branch("track_PT", track_PT, "track_PT[nTrack]/F")
             tree.Branch("track_D0", track_D0, "track_D0[nTrack]/F")
@@ -182,6 +187,7 @@ class Signal(Dataset):
             tree.Branch("track_deltaEta", track_deltaEta, "track_deltaEta[nTrack]/F")
             tree.Branch("track_deltaPhi", track_deltaPhi, "track_deltaPhi[nTrack]/F")
             tree.Branch("tower_entry", tower_entry, "tower_entry[nTower]/I")
+            tree.Branch("tower_cross_section", tower_cross_section, "tower_cross_section[nTower]/I")
             tree.Branch("tower_ET", tower_ET, "tower_ET[nTower]/F")
             tree.Branch("tower_Edges0", tower_Edges0, "tower_Edges0[nTower]/F")
             tree.Branch("tower_Edges1", tower_Edges1, "tower_Edges1[nTower]/F")
@@ -195,7 +201,7 @@ class Signal(Dataset):
                         jet.Towers) >= 1 and jet.TruthTau[prong]:
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)
-                    jet_weight[0] = jet.weight
+                    jet_cross_section[0] = jet.cross_section
                     jet_PT[0] = jet.PT
                     jet_PT_LC_scale[0] = jet.pt_lc_scale
                     jet_f_cent[0] = jet.f_cent
@@ -217,6 +223,7 @@ class Signal(Dataset):
                     for idx in range(0, n_tr):
                         con_track = jet.Tracks[idx]
                         track_entry[idx] = 3  # con_track.entry
+                        track_cross_section[idx] = con_track.weight
                         track_index[idx] = con_track.idx
                         track_PT[idx] = con_track.PT
                         track_D0[idx] = con_track.D0
@@ -226,6 +233,7 @@ class Signal(Dataset):
                     for jdx in range(0, n_to):
                         con_tower = jet.Towers[jdx]
                         tower_entry[jdx] = 5  # con_tower.entry
+                        tower_cross_section[jdx] = con_tower.weight
                         tower_ET[jdx] = con_tower.ET
                         tower_Edges0[jdx] = con_tower.Edges[0]
                         tower_Edges1[jdx] = con_tower.Edges[1]

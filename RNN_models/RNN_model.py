@@ -22,6 +22,9 @@ from keras.layers import Flatten
 from keras.layers import TimeDistributed
 import tensorflow as tf
 from keras.utils.vis_utils import plot_model
+from keras.callbacks import EarlyStopping
+from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ReduceLROnPlateau
 
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.timeseries import timeseries_dataset_from_array
@@ -55,7 +58,7 @@ class Tau_Model():
         -0.5, 10.5, 19.5, 23.5, 27.5, 31.5, 35.5, 39.5, 49.5, 61.5
     ])
 
-    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y):
+    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights):
         self.prong = Prongs
         self.output = TFile.Open("Prong-{}_RNN_Model.root".format(str(Prongs)), "RECREATE")
         self.track_data = inputs[0]
@@ -64,8 +67,7 @@ class Tau_Model():
         self.y_data = y
         self.sig_pt = sig_pt
         self.bck_pt = bck_pt
-        self.sig_w, self.back_w = self.pt_reweight(self.sig_pt, self.bck_pt)
-        self.w = np.append(self.back_w, self.sig_w)
+        self.w = weights
         self.jet_pt = jet_pt
         start_sig_index = -len(self.sig_pt)
         end_bck_index = len(self.bck_pt)
@@ -80,8 +82,6 @@ class Tau_Model():
         self.tower_data = self.tower_data[shuffled_indices]
         self.jet_data = self.jet_data[shuffled_indices]
         self.y_data = self.y_data[shuffled_indices]
-        print(len(self.w))
-        print(len(shuffled_indices))
         self.w = self.w[shuffled_indices]
         self.index_of_sig_bck = self.index_of_sig_bck[shuffled_indices]
         self.jet_pt = np.append(self.bck_pt, self.sig_pt)[shuffled_indices]
@@ -93,7 +93,6 @@ class Tau_Model():
         self.train_jet_pt = self.jet_pt[int(len(self.jet_data)/2+1):-1]
         self.eval_inputs = [self.track_data[0:int(len(self.jet_data)/2+1)], self.tower_data[0:int(len(self.jet_data)/2+1)],
                             self.jet_data[0:int(len(self.jet_data)/2+1)]]
-        print(self.eval_inputs)
         self.eval_y = self.y_data[0:int(len(self.jet_data)/2+1)]
         self.eval_w = self.w[0:int(len(self.jet_data)/2+1)]
         self.eval_sigbck_index = self.index_of_sig_bck[0:int(len(self.jet_data)/2+1)]
@@ -112,7 +111,6 @@ class Tau_Model():
         tob = self.tower_data[0:int(len(self.jet_data)/2+1)]
         jb = self.jet_data[0:int(len(self.jet_data)/2+1)]
         self.eval_back_inputs = [trb[t], tob[t], jb[t]]
-        print(len(self.eval_w))
         self.RNN_Model()
         #self.basic_Model()
         #self.RNN_ModelwoTowers()
@@ -230,12 +228,29 @@ class Tau_Model():
         self.RNNmodel.summary()
         plot_model(self.RNNmodel, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
         #SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
-        self.RNNmodel.compile(optimizer=Adam(learning_rate=0.001), loss="binary_crossentropy",
+        self.RNNmodel.compile(optimizer=SGD(learning_rate=0.01, momentum=0.9, nesterov=True), loss="binary_crossentropy",
                          metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives', "FalseNegatives", "TrueNegatives"])
 
     def Model_Fit(self, batch_size, epochs, validation_split, model="RNNmodel", inputs="RNNmodel"):
         if type(model) == str:
-            self.history = self.RNNmodel.fit(self.inputs, self.y, sample_weight=self.w_train, batch_size=batch_size, epochs=epochs, verbose=1, validation_split=validation_split)
+            #Setup Callbacks
+            callbacks = []
+
+            early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=10, verbose=1)
+            callbacks.append(early_stopping)
+
+            model_checkpoint = ModelCheckpoint(
+                "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
+            callbacks.append(model_checkpoint)
+
+            reduce_lr = ReduceLROnPlateau(patience=4, verbose=1, min_lr=1e-4)
+            callbacks.append(reduce_lr)
+            #End of setup callbacks
+
+            self.history = self.RNNmodel.fit(self.inputs, self.y, sample_weight=self.w_train, batch_size=batch_size,
+                                             epochs=epochs, verbose=1, validation_split=validation_split, callbacks=callbacks)
+
+
             self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
             print(self.history.history.keys())
         else:
@@ -251,16 +266,16 @@ class Tau_Model():
         print("Taus Not IDed : ", results[5])
         print("Total Taus: ",results[3]+results[4]+results[5])
 
-    def pt_reweight(self, sig_pt, bkg_pt):
+    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
         # Binning
         bin_edges = np.percentile(bkg_pt, np.linspace(0.0, 100.0, 50))
 
         bin_edges[0] = 20.0  # 20 GeV lower limit
-        bin_edges[-1] = 1000.0  # 10000 GeV upper limit
+        bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         #print(bin_edges)
         # Reweighting coefficient
-        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=True)
-        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=True)
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=True, weights=sig_cross_section)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=True, weights=bck_cross_section)
 
         coeff = sig_hist / bkg_hist
         #print(coeff)
@@ -277,7 +292,9 @@ class Tau_Model():
     def get_train_score_weights(self):
         sig = self.train_jet_pt[self.train_sigbck_index == 's']
         bck = self.train_jet_pt[self.train_sigbck_index == 'b']
-        sig_w, bck_w = self.pt_reweight(sig, bck)
+        sig_wcs = self.w_train[self.train_sigbck_index == 's']
+        bck_wcs = self.w_train[self.train_sigbck_index == 'b']
+        sig_w, bck_w = self.pt_reweight(sig, bck, sig_wcs, bck_wcs)
         new_arr = np.zeros(len(self.y))
         new_arr[self.train_sigbck_index == 's'] = sig_w
         new_arr[self.train_sigbck_index == 'b'] = bck_w
@@ -297,7 +314,9 @@ class Tau_Model():
     def get_score_weights(self):
         sig = self.eval_jet_pt[self.eval_sigbck_index == 's']
         bck = self.eval_jet_pt[self.eval_sigbck_index == 'b']
-        sig_w, bck_w = self.pt_reweight(sig, bck)
+        sig_wcs = self.eval_w[self.train_sigbck_index == 's']
+        bck_wcs = self.eval_w[self.train_sigbck_index == 'b']
+        sig_w, bck_w = self.pt_reweight(sig, bck, sig_wcs, bck_wcs)
         new_arr = np.zeros(len(self.predictions))
         new_arr[self.eval_sigbck_index == 's'] = sig_w
         new_arr[self.eval_sigbck_index == 'b'] = bck_w

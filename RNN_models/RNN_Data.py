@@ -44,6 +44,16 @@ from root_numpy import tree2array
 
 class RNN_Data():
 
+    pt_bins = np.array([
+        20., 25.178, 31.697, 39.905, 50.237, 63.245, 79.621, 100.000,
+        130.000, 200.000, 316.978, 502.377, 796.214, 1261.914, 2000.000,
+        1000000.000
+    ])
+
+    mu_bins = np.array([
+        -0.5, 10.5, 19.5, 23.5, 27.5, 31.5, 35.5, 39.5, 49.5, 61.5
+    ])
+
     jet_keys = {"jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                 "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
                 , "jet_mass_track_system", "jet_trans_impact_param_sig"}
@@ -71,21 +81,41 @@ class RNN_Data():
             #sig_jet, sig_tr, sig_to, sig_label = self.read_tree(self.SignalTree)
             #back_jet, back_tr, back_to, back_label = self.read_tree(self.BackgroundTree)
 
-            jet_arr, track_arr, tower_arr, label = self.read_tree(self.BackgroundTree, self.SignalTree)
+            jet_arr, track_arr, tower_arr, label, cross_section = self.read_tree(self.BackgroundTree, self.SignalTree)
             self.input_jet = jet_arr
             self.input_track = track_arr
             self.input_tower = tower_arr
             self.Ytrain = label
+            self.cross_section = cross_section
             file = open(pickle_file, "wb")
-            pickle.dump([self.input_track, self.input_tower, self.input_jet, self.Ytrain, [self.sig_pt, self.bck_pt]], file)
+            pickle.dump([self.input_track, self.input_tower, self.input_jet, self.Ytrain, [self.sig_pt, self.bck_pt], self.cross_section, self.pt_weights, self.new_weights], file)
             file.close()
-            self.bck_pt = self.bck_pt[0:50000]
+
+            file = open(pickle_file, "rb")
+            data = pickle.load(file)
+            file.close()
+            file = open("{}_untransformed_data".format(self.prong), "rb")
+            [track_untrans, tower_untrans, jet_untrans, yval] = pickle.load(file)
+            file.close()
+            self.jet_pt = jet_untrans["jet_PT"]
+            if print_hists:
+                file = open("{}_transformed_data".format(self.prong), "rb")
+                [track_trans, tower_trans, jet_trans, yval, new_weights] = pickle.load(file)
+                file.close()
+                self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yval, new_weights)
+                self.fill_trans_hists(jet_trans, track_trans, tower_trans, yval, new_weights)
+                self.plot_hists()
+
+            self.bck_pt = self.bck_pt[0:168800]
             self.sig_pt = self.sig_pt[-17212:-1]
-            self.jet_pt = np.append(self.jet_pt[0:50000], self.jet_pt[-17212:-1], axis=0)
-            self.input_jet = np.append(jet_arr[0:50000], jet_arr[-17212:-1], axis=0)
-            self.input_track = np.append(track_arr[0:50000], track_arr[-17212:-1], axis=0)
-            self.input_tower = np.append(tower_arr[0:50000], tower_arr[-17212:-1], axis=0)
-            self.Ytrain = np.append(label[0:50000], label[-17212:-1], axis=0)
+            self.jet_pt = np.append(self.jet_pt[0:168800], self.jet_pt[-17212:-1], axis=0)
+            self.cross_section = np.append(self.cross_section[0:168800], self.cross_section[-17212:-1], axis=0)
+            self.pt_weights = np.append(self.pt_weights[0:168800], self.pt_weights[-17212:-1], axis=0)
+            self.new_weights = np.append(self.new_weights[0:168800], self.new_weights[-17212:-1], axis=0)
+            self.input_jet = np.append(jet_arr[0:168800], jet_arr[-17212:-1], axis=0)
+            self.input_track = np.append(track_arr[0:168800], track_arr[-17212:-1], axis=0)
+            self.input_tower = np.append(tower_arr[0:168800], tower_arr[-17212:-1], axis=0)
+            self.Ytrain = np.append(label[0:168800], label[-17212:-1], axis=0)
         elif load_pickled_data:
             #print(rn.root2array("../NewTTrees/{}.root".format(BacktreeFile), treename="{}{}".format(BackTreeName, BackendPartOfTree), branches=["track_PT"]))
             file = open(pickle_file, "rb")
@@ -97,10 +127,10 @@ class RNN_Data():
             self.jet_pt = jet_untrans["jet_PT"]
             if print_hists:
                 file = open("{}_transformed_data".format(self.prong), "rb")
-                [track_trans, tower_trans, jet_trans, yval] = pickle.load(file)
+                [track_trans, tower_trans, jet_trans, yval, new_weights] = pickle.load(file)
                 file.close()
-                self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yval)
-                self.fill_trans_hists(jet_trans, track_trans, tower_trans, yval)
+                self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yval, new_weights)
+                self.fill_trans_hists(jet_trans, track_trans, tower_trans, yval, new_weights)
                 self.plot_hists()
             temp_jet = data[2]
             temp_track = data[0]
@@ -108,6 +138,9 @@ class RNN_Data():
             temp_labels = data[3]
             self.sig_pt = data[4][0]
             self.bck_pt = data[4][1]
+            self.cross_section = data[5]
+            self.pt_weights = data[6]
+            self.new_weights = data[7]
             seed = np.random.randint(1, 9999)
             rng = np.random.default_rng(seed)
             np.random.seed(seed)
@@ -115,17 +148,48 @@ class RNN_Data():
             self.all_track = temp_track
             self.all_tower = temp_tower
             self.all_label = temp_labels
-            self.bck_pt = self.bck_pt[0:100000]
+            self.bck_pt = self.bck_pt[0:168800]
             self.sig_pt = self.sig_pt[-17212:-1]
-            self.jet_pt = np.append(self.jet_pt[0:100000], self.jet_pt[-17212:-1], axis=0)
-            self.input_jet = np.append(temp_jet[0:100000], temp_jet[-17212:-1], axis=0)
-            self.input_track = np.append(temp_track[0:100000], temp_track[-17212:-1], axis=0)
-            self.input_tower = np.append(temp_tower[0:100000], temp_tower[-17212:-1], axis=0)
-            self.Ytrain = np.append(temp_labels[0:100000], temp_labels[-17212:-1], axis=0)
+            self.jet_pt = np.append(self.jet_pt[0:168800], self.jet_pt[-17212:-1], axis=0)
+            self.cross_section = np.append(self.cross_section[0:168800], self.cross_section[-17212:-1], axis=0)
+            self.pt_weights = np.append(self.pt_weights[0:168800], self.pt_weights[-17212:-1], axis=0)
+            self.new_weights = np.append(self.new_weights[0:168800], self.new_weights[-17212:-1], axis=0)
+            self.input_jet = np.append(temp_jet[0:168800], temp_jet[-17212:-1], axis=0)
+            self.input_track = np.append(temp_track[0:168800], temp_track[-17212:-1], axis=0)
+            self.input_tower = np.append(temp_tower[0:168800], temp_tower[-17212:-1], axis=0)
+            self.Ytrain = np.append(temp_labels[0:168800], temp_labels[-17212:-1], axis=0)
 
     # TRACK_ARRAY: ['[index]',[P], [PT], [L], [D0], [DZ], [e], [e], [deltaEta], [deltaPhi], [deltaR]]
     # TOWER_ARRAY: ['[index]',[E], [ET], [Eta], [Phi], [Edges0], [Edges1], [Edges2], [Edges3], [Eem], [Ehad], [T],
     # [deltaEta], [deltaPhi], [deltaR]]
+
+    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
+        # Binning
+        bin_edges = np.percentile(bkg_pt, np.linspace(0.0, 100.0, 50))
+
+        bin_edges[0] = 20.0  # 20 GeV lower limit
+        bin_edges[-1] = 10000.0  # 10000 GeV upper limit
+        #print(bin_edges)
+        # Reweighting coefficient
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=True, weights=sig_cross_section)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=True, weights=bck_cross_section)
+
+        coeff = sig_hist / bkg_hist
+        #print(len(coeff))
+        #print(coeff)
+        # Apply reweighting
+        sig_weight = np.ones_like(sig_pt)
+        bkg_weight = coeff[np.digitize(bkg_pt, bin_edges) - 1].astype(np.float32)
+
+        print("sig_weights {}".format(len(sig_weight)))
+        print("bkg_weights {}".format(len(bkg_weight)))
+
+        return sig_weight, bkg_weight
+
+    def get_pt_weights(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
+        pt_weights = self.pt_reweight(sig_pt, bkg_pt, sig_cross_section, bck_cross_section)
+
+
 
     #LOGs and ABS
 
@@ -272,103 +336,113 @@ class RNN_Data():
     # untrans_f_cent_bins = np.log10(np.arange(50) * 1000)
 
 
-    def fill_untrans_hists(self, jet, track, tower, label):
+    def fill_untrans_hists(self, jet, track, tower, label, weight):
         #if not os.path.exists("{}_untransformed_data".format(self.prong)):
         file = open("{}_untransformed_data".format(self.prong), "wb")
         pickle.dump([track, tower, jet, label], file)
         file.close()
+        #print(len(label[label==1.]))
+        sel0 = label <= 0.5
+        sel1 = label >= 0.5
         for key in tqdm(RNN_Data.jet_keys):
             min_val = np.min(jet[key].flatten().flatten())
             max_val = np.max(jet[key].flatten().flatten())
-            for l in [0, 1]:
-                arr_ = jet[key][label == l]
+            for l in [[sel0, 0], [sel1, 1]]:
+                arr_ = jet[key][l[0]]
+                w = weight[l[0]]
+                w = w.flatten().flatten()
                 arr = arr_.flatten().flatten()
-                arr = arr[np.abs(arr) != 0.]
+                #arr = arr_
+                sel2 = np.abs(arr) != 0.
+                arr = arr[sel2]
+                w = w[sel2]
                 # print(arr)
                 if key == "jet_PT":
-                    self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 150,
+                    self.hists_before_trans["{}_label{}".format(key, str(l[1]))] = ROOT.TH1D("{}_{}".format(key, l[1]), "{}_{}".format(key, l[1]), 100,
                                                                         0., 750.)
                 else:
-                    self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l),
-                                                                                         "{}_{}".format(key, l), 35,
+                    self.hists_before_trans["{}_label{}".format(key, str(l[1]))] = ROOT.TH1D("{}_{}".format(key, l[1]),
+                                                                                         "{}_{}".format(key, l[1]), 35,
                                                                                          min_val, max_val)
-                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
+                #print("fill arr {} | W arr {}".format(len(arr), len(w)))
+                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l[1]))], arr, weights=w)
         for key in tqdm(RNN_Data.track_keys):
             a = track[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
-            for l in [0, 1]:
-                arr_ = track[key][label == l]
+            for l in [[sel0, 0], [sel1, 1]]:
+                arr_ = track[key][l[0]]
                 #print(arr_)
                 arr = arr_.flatten().flatten().flatten()
                 arr = arr[np.abs(arr) != 0.]
                 arr = arr[~np.isnan(arr)]
-                self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                self.hists_before_trans["{}_label{}".format(key, str(l[1]))] = ROOT.TH1D("{}_{}".format(key, l[1]), "{}_{}".format(key, l[1]),
                                                                     35, min_val,
                                                                     max_val)
-                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
+                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l[1]))], arr)
         for key in tqdm(RNN_Data.tower_keys):
             a = tower[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
-            for l in [0, 1]:
-                arr_ = tower[key][label == l]
+            for l in [[sel0, 0], [sel1, 1]]:
+                arr_ = tower[key][l[0]]
                 arr = arr_.flatten().flatten().flatten()
                 arr = arr[np.abs(arr) != 0.]
                 arr = arr[~np.isnan(arr)]
-                self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                self.hists_before_trans["{}_label{}".format(key, str(l[1]))] = ROOT.TH1D("{}_{}".format(key, l[1]), "{}_{}".format(key, l[1]),
                                                                     35, min_val,
                                                                     max_val)
-                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
+                rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l[1]))], arr)
 
 
-    def fill_trans_hists(self, jet, track, tower, label):
+    def fill_trans_hists(self, jet, track, tower, label, weight):
        # if not os.path.exists("{}_transformed_data".format(self.prong)):
         file = open("{}_transformed_data".format(self.prong), "wb")
-        pickle.dump([track, tower, jet, label], file)
+        pickle.dump([track, tower, jet, label, weight], file)
         file.close()
+        sel0 = label <= 0.5
+        sel1 = label >= 0.5
         for key in tqdm(RNN_Data.jet_keys):
             min_val = np.min(jet[key].flatten().flatten())
             max_val = np.max(jet[key].flatten().flatten())
-            for l in [0, 1]:
-                arr_ = jet[key][label == l]
+            for l in [[sel0, 0], [sel1, 1]]:
+                arr_ = jet[key][l[0]]
+                w = weight[l[0]]
                 arr = arr_.flatten().flatten()
+                #arr = arr_
                 arr = arr[np.abs(arr) != 0.]
+                w = w[np.abs(arr) != 0.]
                 # print(arr)
-                if key == "jet_PT":
-                    self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 150,
-                                                                        0., 750.)
-                else:
-                    self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l),
-                                                                                         "{}_{}".format(key, l), 35,
+                self.hists_after_trans["{}_label{}".format(key, str(l[1]))] = ROOT.TH1D("{}_{}".format(key, l[1]),
+                                                                                         "{}_{}".format(key, l[1]), 35,
                                                                                          min_val, max_val)
-                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
+                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l[1]))], arr, weights=w)
         for key in tqdm(RNN_Data.track_keys):
             a = track[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
-            for l in [0, 1]:
-                arr_ = track[key][label == l]
+            for l in [[sel0, 0], [sel1, 1]]:
+                arr_ = track[key][l[0]]
                 arr = arr_.flatten().flatten().flatten()
                 arr = arr[np.abs(arr) != 0.]
                 arr = arr[~np.isnan(arr)]
-                self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                self.hists_after_trans["{}_label{}".format(key, str(l[1]))] = ROOT.TH1D("{}_{}".format(key, l[1]), "{}_{}".format(key, l[1]),
                                                                     35, min_val,
                                                                     max_val)
-                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
+                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l[1]))], arr)
         for key in tqdm(RNN_Data.tower_keys):
             a = tower[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
             max_val = np.max(a[~np.isnan(a)])
-            for l in [0, 1]:
-                arr_ = tower[key][label == l]
+            for l in [[sel0, 0], [sel1, 1]]:
+                arr_ = tower[key][l[0]]
                 arr = arr_.flatten().flatten().flatten()
                 arr = arr[np.abs(arr) != 0.]
                 arr = arr[~np.isnan(arr)]
-                self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l),
+                self.hists_after_trans["{}_label{}".format(key, str(l[1]))] = ROOT.TH1D("{}_{}".format(key, l[1]), "{}_{}".format(key, l[1]),
                                                                     35, min_val,
                                                                     max_val)
-                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
+                rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l[1]))], arr)
 
     def plot_hists(self):
         jet_i = 0
@@ -421,7 +495,7 @@ class RNN_Data():
                 jet_canvas.Update()
                 jet_i += 1
                 jet_canvas.cd(c_i + 1)
-            jet_canvas.Print("Jet_{}.pdf".format(key))
+            jet_canvas.Print("Input_Histograms/Jet_{}.pdf".format(key))
             jet_canvases.append([key, jet_canvas])
         track_i = 0
 
@@ -468,7 +542,7 @@ class RNN_Data():
                 track_canvas.Update()
                 track_i += 1
                 track_canvas.cd(c_i + 1)
-            track_canvas.Print("Track_{}.pdf".format(key))
+            track_canvas.Print("Input_Histograms/Track_{}.pdf".format(key))
             track_canvases.append([key, track_canvas])
 
         tower_i = 0
@@ -515,12 +589,11 @@ class RNN_Data():
                 tower_canvas.Update()
                 tower_i += 1
                 tower_canvas.cd(c_i + 1)
-            tower_canvas.Print("Tower_{}.pdf".format(key))
+            tower_canvas.Print("Input_Histograms/Tower_{}.pdf".format(key))
             tower_canvases.append([key, tower_canvas])
 
         input("Enter to continue")
         return True
-
 
 
     def read_tree(self, backtree, sigtree):
@@ -530,6 +603,12 @@ class RNN_Data():
         jet_untrans = {}
         track_untrans = {}
         tower_untrans = {}
+        b_cs = tree2array(backtree, branches=["jet_cross_section"]).astype(np.float32) / 10000
+        s_cs = tree2array(sigtree, branches=["jet_cross_section"]).astype(np.float32)
+        s_cs = np.ones_like(s_cs)
+        #b_cs = np.ones_like(b_cs)
+        cross_section = np.append(b_cs, s_cs).astype(np.float32)
+        #cross_section = np.ones_like(cross_section)
         for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                          "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system",
                               "jet_mass_track_system", "jet_trans_impact_param_sig", "nTrack", "nTower"]):
@@ -549,6 +628,9 @@ class RNN_Data():
                         if jet_var in ["jet_PT"]:
                             self.sig_pt = sigjet
                             self.bck_pt = backjet
+                            sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs)
+                            self.pt_weights = np.append(bck_pt_w, sig_pt_w, axis=0)
+                            self.new_weights = self.pt_weights * cross_section
                             jet[jet_var] = self.log_epsilon(jet[jet_var])
                             jet["untrans_jet_PT"] = jet_untrans[jet_var]
                         elif jet_var in ["jet_f_cent", "jet_iF_leadtrack"]:
@@ -625,14 +707,15 @@ class RNN_Data():
             #     tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.min_max_scale, per_obj=False))
        # print(sorted(range(len(tower["tower_ET"][3])), key=lambda k: tower["tower_ET"][3][k], reverse=True))
       #  print(sorted(range(len(tower_ET[3])), key=lambda k: tower_ET[3][k], reverse=True))
+
         file = open(self.dicts_file, "wb")
-        pickle.dump([jet, track, tower, yLabel], file)
+        pickle.dump([jet, track, tower, yLabel, cross_section, self.pt_weights, self.new_weights], file)
         file.close()
         self.jet_pt = jet_untrans['jet_PT']
-        self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yLabel)
-        self.fill_trans_hists(jet, track, tower, yLabel)
+        self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yLabel, self.new_weights)
+        self.fill_trans_hists(jet, track, tower, yLabel, self.new_weights)
         jet_input, track_input, tower_input = self.sort_inputs(jet, track, tower)
-        return jet_input, track_input, tower_input, yLabel
+        return jet_input, track_input, tower_input, yLabel, cross_section
 
 
 

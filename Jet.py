@@ -17,11 +17,11 @@ from Tower import Tower_
 
 class Jet_():
 
-    def __init__(self, entry, idx, event, weight, jet_obj, particles, Event_Particles, Event_Tracks, Event_Towers, constituents, hists=True):
+    def __init__(self, entry, idx, event, cross_section, jet_obj, particles, Event_Particles, Event_Tracks, Event_Towers, constituents, hists=True):
         self.entry = entry
         self.idx = idx
         self.event = event
-        self.weight = weight
+        self.cross_section = cross_section
         if hists:
             self.jet_obj = jet_obj
         else:
@@ -110,10 +110,16 @@ class Jet_():
 
     def PT_LC_scale(self):
         pt_lc_scale = 0.
+        eemsum = 0.
+        ehadsum = 0.
+        ptsum = 0.
+        for track in self.Tracks:
+            if track.CoreRegion:
+                ptsum += track.PT
         for tower in self.Towers:
-            if tower.CoreRegion:
-                pt_lc_scale += tower.ET
-        self.pt_lc_scale = pt_lc_scale
+            eemsum += tower.Eem
+            ehadsum += tower.Ehad
+        self.pt_lc_scale = (ptsum - ehadsum) / eemsum if eemsum>0. else -999.0
 
 
     #may use Eem instead of ET
