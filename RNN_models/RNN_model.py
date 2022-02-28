@@ -236,14 +236,14 @@ class Tau_Model():
             #Setup Callbacks
             callbacks = []
 
-            early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=10, verbose=1)
+            early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1)
             callbacks.append(early_stopping)
 
             model_checkpoint = ModelCheckpoint(
                 "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
             callbacks.append(model_checkpoint)
 
-            reduce_lr = ReduceLROnPlateau(patience=4, verbose=1, min_lr=1e-4)
+            reduce_lr = ReduceLROnPlateau(patience=6, verbose=1, min_lr=1e-4)
             callbacks.append(reduce_lr)
             #End of setup callbacks
 

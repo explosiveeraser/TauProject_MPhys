@@ -194,7 +194,7 @@ class Background(Dataset):
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             for jet in tqdm(self.JetArray):
-                if jet.PT >= 10.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(
+                if jet.PT >= 20.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1:
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)
