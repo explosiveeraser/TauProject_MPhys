@@ -69,7 +69,7 @@ class Plots():
     ])
 
 
-    def __init__(self, real_y, pred_y, weights, train_y, train_pred_y, train_weights, jet_pt, legend=True, ylim=(1, 1e7)):
+    def __init__(self, name, real_y, pred_y, weights, train_y, train_pred_y, train_weights, jet_pt, legend=True, ylim=(1, 1e7)):
         self.real_y = real_y
         self.pred_y = pred_y
         self.ylim = ylim
@@ -79,6 +79,7 @@ class Plots():
         self.train_weights = train_weights
         self.jet_pt = jet_pt
         self.legend = legend
+        self.name = name
 
     def plot_raw_score_vs_jetPT(self):
         fig, ax = plt.subplots(2)
@@ -107,15 +108,20 @@ class Plots():
   #      true_hist_test = ROOT.TH1D("TEST_rew_RNN_score_trueTaus", "TEST_rew_RNN_score_trueTaus", 50, 0., 1.)
    #     fake_hist_test = ROOT.TH1D("TEST_rew_RNN_score_fakeTaus", "TEST_rew_RNN_score_fakeTaus", 50, 0., 1.)
 
+        test = 0
+
         for i in trange(0, len(self.pred_y)):
             if self.real_y[i] == 0.:
                 fake_hist.Fill(self.pred_y[i])
                 fake_hist_reweight.Fill(self.pred_y[i], self.weights[i])
            #     fake_hist_test.Fill(eff[i][0])
-            elif self.real_y[i] == 1.:
+            elif self.real_y[i] > 0.5:
+                test += 1
                 true_hist.Fill(self.pred_y[i])
                 true_hist_reweight.Fill(self.pred_y[i], self.weights[i])
           #      true_hist_test.Fill(eff[i][0])
+
+        print(test)
 
         fake_hist_integral = fake_hist.Integral()
         true_hist_integral = true_hist.Integral()
@@ -145,7 +151,7 @@ class Plots():
         # true_hist_test.SetLineColor(ROOT.kRed)
         # true_hist_test.Draw('HIST SAMES0')
         canvas.Update()
-        canvas.Print("histogram_RNN_score.pdf")
+        canvas.Print(self.name + "_histogram_RNN_score.pdf")
 
 
     # def plot_efficiencies(self, sig_train, sig_eval, eff):

@@ -23,6 +23,7 @@ class Track_():
             self.track_obj = None
         self.P = track_obj.P
         self.PT = track_obj.PT
+        self.Mass = track_obj.Mass
         self.Eta = track_obj.Eta
         self.Phi = track_obj.Phi
         self.L = track_obj.L

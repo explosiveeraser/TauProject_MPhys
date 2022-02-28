@@ -134,6 +134,7 @@ class Background(Dataset):
             jet_frac_trEM_pt = array('f', [0.])
             jet_mass_track_EM_system = array('f', [0.])
             jet_mass_track_system = array('f', [0.])
+            jet_trans_impact_param_sig = array('f', [0.])
             jet_TruthTau = array('i', [0])
             nTrack = array('i', [0])
             nTower = array('i', [0])
@@ -167,6 +168,7 @@ class Background(Dataset):
             tree.Branch("jet_frac_trEM_pt", jet_frac_trEM_pt, "jet_frac_trEM_pt/F")
             tree.Branch("jet_mass_track_EM_system", jet_mass_track_EM_system, "jet_mass_track_EM_system/F")
             tree.Branch("jet_mass_track_system", jet_mass_track_system, "jet_mass_track_system/F")
+            tree.Branch("jet_trans_impact_param_sig", jet_trans_impact_param_sig, 'jet_trans_impact_param_sig/F')
             tree.Branch("nTrack", nTrack, "nTrack/I")
             tree.Branch("nTower", nTower, "nTower/I")
             tree.Branch("track_entry", track_entry, "track_entry[nTrack]/I")
@@ -201,6 +203,7 @@ class Background(Dataset):
                     jet_frac_trEM_pt[0] = jet.frac_trEM_jet_pt
                     jet_mass_track_EM_system[0] = jet.mass_trackplusEM
                     jet_mass_track_system[0] = jet.mass_of_system
+                    jet_trans_impact_param_sig[0] = jet.max_trans_impact_param
                     jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)

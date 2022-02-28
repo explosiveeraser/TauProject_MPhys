@@ -62,6 +62,7 @@ class Jet_():
         self.frac_trEM_pt()
         self.mass_track_EM_system()
         self.Mass_Track_System()
+        self.Trans_Impact_Param_Sign()
 
     def _Find_Particles(self, evt_particles):
         num_particles = len(evt_particles)
@@ -202,7 +203,7 @@ class Jet_():
         self.frac_trEM_jet_pt = (core_track_pt+Eem_tower)/self.PT
 
     def mass_track_EM_system(self):
-        core_track_p = 0.
+        core_track_mass = 0.
         Eem_tower = 0.
         most_em_towers = [0., 0.]
         for tower in self.Towers:
@@ -213,16 +214,25 @@ class Jet_():
                     most_em_towers[1] = tower.Eem
         for track in self.Tracks:
             if track.CoreRegion:
-                core_track_p += track.P
+                core_track_mass += track.Mass
         for tower_em in most_em_towers:
             Eem_tower += tower_em
-        self.mass_trackplusEM = core_track_p + Eem_tower
+        self.mass_trackplusEM = core_track_mass + Eem_tower
 
     def Mass_Track_System(self):
-        core_track_p = 0.
+        core_track_mass = 0.
         for track in self.Tracks:
-            core_track_p += track.P
-        self.mass_of_system = core_track_p
+            core_track_mass += track.P
+        self.mass_of_system = core_track_mass
+
+    def Trans_Impact_Param_Sign(self):
+        self.max_trans_impact_param = 0.
+        for track in self.Tracks:
+            if track.CoreRegion:
+                if track.D0 >= self.max_trans_impact_param:
+                    self.max_trans_impact_param = track.D0
+        if self.max_trans_impact_param > 0.2:
+            self.max_trans_impact_param = 0.2
 
 
 

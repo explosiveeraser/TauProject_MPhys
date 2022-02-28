@@ -46,7 +46,7 @@ class RNN_Data():
 
     jet_keys = {"jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                 "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
-                , "jet_mass_track_system"}
+                , "jet_mass_track_system", "jet_trans_impact_param_sig"}
 
     track_keys = {"track_PT", "track_D0", "track_DZ", "track_deltaEta",
                     "track_deltaPhi"}
@@ -80,6 +80,7 @@ class RNN_Data():
             pickle.dump([self.input_track, self.input_tower, self.input_jet, self.Ytrain, [self.sig_pt, self.bck_pt]], file)
             file.close()
             self.bck_pt = self.bck_pt[0:50000]
+            self.sig_pt = self.sig_pt[-17212:-1]
             self.jet_pt = np.append(self.jet_pt[0:50000], self.jet_pt[-17212:-1], axis=0)
             self.input_jet = np.append(jet_arr[0:50000], jet_arr[-17212:-1], axis=0)
             self.input_track = np.append(track_arr[0:50000], track_arr[-17212:-1], axis=0)
@@ -114,13 +115,13 @@ class RNN_Data():
             self.all_track = temp_track
             self.all_tower = temp_tower
             self.all_label = temp_labels
-            self.bck_pt = self.bck_pt[0:50000]
-            self.jet_pt = np.append(self.jet_pt[0:50000], self.jet_pt[-17212:-1], axis=0)
-            self.input_jet = np.append(temp_jet[0:50000], temp_jet[-17212:-1], axis=0)
-            self.input_track = np.append(temp_track[0:50000], temp_track[-17212:-1], axis=0)
-            self.input_tower = np.append(temp_tower[0:50000], temp_tower[-17212:-1], axis=0)
-            self.Ytrain = np.append(temp_labels[0:50000], temp_labels[-17212:-1], axis=0)
-
+            self.bck_pt = self.bck_pt[0:100000]
+            self.sig_pt = self.sig_pt[-17212:-1]
+            self.jet_pt = np.append(self.jet_pt[0:100000], self.jet_pt[-17212:-1], axis=0)
+            self.input_jet = np.append(temp_jet[0:100000], temp_jet[-17212:-1], axis=0)
+            self.input_track = np.append(temp_track[0:100000], temp_track[-17212:-1], axis=0)
+            self.input_tower = np.append(temp_tower[0:100000], temp_tower[-17212:-1], axis=0)
+            self.Ytrain = np.append(temp_labels[0:100000], temp_labels[-17212:-1], axis=0)
 
     # TRACK_ARRAY: ['[index]',[P], [PT], [L], [D0], [DZ], [e], [e], [deltaEta], [deltaPhi], [deltaR]]
     # TOWER_ARRAY: ['[index]',[E], [ET], [Eta], [Phi], [Edges0], [Edges1], [Edges2], [Edges3], [Eem], [Ehad], [T],
@@ -223,10 +224,10 @@ class RNN_Data():
         track_input = []
         tower_input = []
         for idx in trange(0, len(jet_dict["jet_PT"])):
-            temp = [jet_dict["jet_PT"][idx], jet_dict["jet_PT_LC_scale"][idx], jet_dict["jet_f_cent"][idx],
+            temp = [jet_dict["untrans_jet_PT"][idx], jet_dict["jet_PT"][idx], jet_dict["jet_PT_LC_scale"][idx], jet_dict["jet_f_cent"][idx],
                     jet_dict["jet_iF_leadtrack"][idx], jet_dict["jet_max_deltaR"][idx], jet_dict["jet_Ftrack_Iso"][idx],
                     jet_dict["jet_ratio_ToEem_P"][idx], jet_dict["jet_frac_trEM_pt"][idx], jet_dict["jet_mass_track_EM_system"][idx],
-                    jet_dict["jet_mass_track_system"][idx]]
+                    jet_dict["jet_mass_track_system"][idx], jet_dict["jet_trans_impact_param_sig"][idx]]
             jet_input.append(np.asarray(temp).astype(np.float32))
         for idx in trange(0, len(track_dict["track_PT"])):
             temp1 = []
@@ -272,10 +273,10 @@ class RNN_Data():
 
 
     def fill_untrans_hists(self, jet, track, tower, label):
-        if not os.path.exists("{}_untransformed_data".format(self.prong)):
-            file = open("{}_untransformed_data".format(self.prong), "wb")
-            pickle.dump([track, tower, jet, label], file)
-            file.close()
+        #if not os.path.exists("{}_untransformed_data".format(self.prong)):
+        file = open("{}_untransformed_data".format(self.prong), "wb")
+        pickle.dump([track, tower, jet, label], file)
+        file.close()
         for key in tqdm(RNN_Data.jet_keys):
             min_val = np.min(jet[key].flatten().flatten())
             max_val = np.max(jet[key].flatten().flatten())
@@ -284,8 +285,13 @@ class RNN_Data():
                 arr = arr_.flatten().flatten()
                 arr = arr[np.abs(arr) != 0.]
                 # print(arr)
-                self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 35,
-                                                                    min_val, max_val)
+                if key == "jet_PT":
+                    self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 150,
+                                                                        0., 750.)
+                else:
+                    self.hists_before_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l),
+                                                                                         "{}_{}".format(key, l), 35,
+                                                                                         min_val, max_val)
                 rn.fill_hist(self.hists_before_trans["{}_label{}".format(key, str(l))], arr)
         for key in tqdm(RNN_Data.track_keys):
             a = track[key].flatten().flatten()
@@ -293,7 +299,7 @@ class RNN_Data():
             max_val = np.max(a[~np.isnan(a)])
             for l in [0, 1]:
                 arr_ = track[key][label == l]
-                print(arr_)
+                #print(arr_)
                 arr = arr_.flatten().flatten().flatten()
                 arr = arr[np.abs(arr) != 0.]
                 arr = arr[~np.isnan(arr)]
@@ -317,10 +323,10 @@ class RNN_Data():
 
 
     def fill_trans_hists(self, jet, track, tower, label):
-        if not os.path.exists("{}_transformed_data".format(self.prong)):
-            file = open("{}_transformed_data".format(self.prong), "wb")
-            pickle.dump([track, tower, jet, label], file)
-            file.close()
+       # if not os.path.exists("{}_transformed_data".format(self.prong)):
+        file = open("{}_transformed_data".format(self.prong), "wb")
+        pickle.dump([track, tower, jet, label], file)
+        file.close()
         for key in tqdm(RNN_Data.jet_keys):
             min_val = np.min(jet[key].flatten().flatten())
             max_val = np.max(jet[key].flatten().flatten())
@@ -329,8 +335,13 @@ class RNN_Data():
                 arr = arr_.flatten().flatten()
                 arr = arr[np.abs(arr) != 0.]
                 # print(arr)
-                self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 35,
-                                                                    min_val, max_val)
+                if key == "jet_PT":
+                    self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l), "{}_{}".format(key, l), 150,
+                                                                        0., 750.)
+                else:
+                    self.hists_after_trans["{}_label{}".format(key, str(l))] = ROOT.TH1D("{}_{}".format(key, l),
+                                                                                         "{}_{}".format(key, l), 35,
+                                                                                         min_val, max_val)
                 rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l))], arr)
         for key in tqdm(RNN_Data.track_keys):
             a = track[key].flatten().flatten()
@@ -521,7 +532,7 @@ class RNN_Data():
         tower_untrans = {}
         for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                          "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system",
-                              "jet_mass_track_system", "nTrack", "nTower"]):
+                              "jet_mass_track_system", "jet_trans_impact_param_sig", "nTrack", "nTower"]):
             if jet_var != "jet_TruthTau":
                 backjet = tree2array(backtree, branches=[jet_var]).astype(np.float32)
                 sigjet = tree2array(sigtree, branches=[jet_var]).astype(np.float32)
@@ -539,6 +550,7 @@ class RNN_Data():
                             self.sig_pt = sigjet
                             self.bck_pt = backjet
                             jet[jet_var] = self.log_epsilon(jet[jet_var])
+                            jet["untrans_jet_PT"] = jet_untrans[jet_var]
                         elif jet_var in ["jet_f_cent", "jet_iF_leadtrack"]:
                             for idx in range(0, len(jet[jet_var])):
                                 if jet[jet_var][idx] < 0.:
@@ -546,7 +558,7 @@ class RNN_Data():
                             jet[jet_var] = self.log_epsilon(jet[jet_var], epsilon=1e-6)
                 if jet_var in ["jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                 "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
-                , "jet_mass_track_system"]:
+                , "jet_mass_track_system", "jet_trans_impact_param_sig"]:
                     jet[jet_var] = self.preprocess(jet_var, jet[jet_var], self.scale_flat)
             elif jet_var == "jet_TruthTau":
                 backlabel = tree2array(backtree, branches=["jet_TruthTau"]).astype(np.float32)

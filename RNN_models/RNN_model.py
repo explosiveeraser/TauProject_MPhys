@@ -46,7 +46,7 @@ from sklearn.metrics import auc
 class Tau_Model():
 
     pt_bins = np.array([
-        10., 25.178, 31.697, 39.905, 50.237, 63.245, 79.621, 100.000,
+        20., 25.178, 31.697, 39.905, 50.237, 63.245, 79.621, 100.000,
         130.000, 200.000, 316.978, 502.377, 796.214, 1261.914, 2000.000,
         1000000.000
     ])
@@ -64,6 +64,8 @@ class Tau_Model():
         self.y_data = y
         self.sig_pt = sig_pt
         self.bck_pt = bck_pt
+        self.sig_w, self.back_w = self.pt_reweight(self.sig_pt, self.bck_pt)
+        self.w = np.append(self.back_w, self.sig_w)
         self.jet_pt = jet_pt
         start_sig_index = -len(self.sig_pt)
         end_bck_index = len(self.bck_pt)
@@ -78,26 +80,45 @@ class Tau_Model():
         self.tower_data = self.tower_data[shuffled_indices]
         self.jet_data = self.jet_data[shuffled_indices]
         self.y_data = self.y_data[shuffled_indices]
+        print(len(self.w))
+        print(len(shuffled_indices))
+        self.w = self.w[shuffled_indices]
         self.index_of_sig_bck = self.index_of_sig_bck[shuffled_indices]
         self.jet_pt = np.append(self.bck_pt, self.sig_pt)[shuffled_indices]
-
         self.inputs = [self.track_data[int(len(self.jet_data)/2+1):-1], self.tower_data[int(len(self.jet_data)/2+1):-1],
                        self.jet_data[int(len(self.jet_data)/2+1):-1]]
         self.y = self.y_data[int(len(self.jet_data)/2+1):-1]
+        self.w_train = self.w[int(len(self.jet_data)/2+1):-1]
         self.train_sigbck_index = self.index_of_sig_bck[int(len(self.jet_data)/2+1):-1]
         self.train_jet_pt = self.jet_pt[int(len(self.jet_data)/2+1):-1]
-
         self.eval_inputs = [self.track_data[0:int(len(self.jet_data)/2+1)], self.tower_data[0:int(len(self.jet_data)/2+1)],
                             self.jet_data[0:int(len(self.jet_data)/2+1)]]
+        print(self.eval_inputs)
         self.eval_y = self.y_data[0:int(len(self.jet_data)/2+1)]
+        self.eval_w = self.w[0:int(len(self.jet_data)/2+1)]
         self.eval_sigbck_index = self.index_of_sig_bck[0:int(len(self.jet_data)/2+1)]
         self.eval_jet_pt = self.jet_pt[0:int(len(self.jet_data)/2+1)]
+        t = []
+        for p in tqdm(self.eval_sigbck_index):
+            if p == "b":
+                t.append(True)
+            elif p == "s":
+                t.append(False)
+            elif p == "a":
+                t.append(False)
+        self.eval_back_y = self.eval_y[t]
+        self.eval_back_w = self.eval_w[t]
+        trb = self.track_data[0:int(len(self.jet_data)/2+1)]
+        tob = self.tower_data[0:int(len(self.jet_data)/2+1)]
+        jb = self.jet_data[0:int(len(self.jet_data)/2+1)]
+        self.eval_back_inputs = [trb[t], tob[t], jb[t]]
+        print(len(self.eval_w))
         self.RNN_Model()
         #self.basic_Model()
         #self.RNN_ModelwoTowers()
 
     def basic_Model(self):
-        HL_input = Input(shape=(10,))
+        HL_input = Input(shape=(11,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer='RandomUniform',
                          bias_initializer='zeros')(HL_input)
         HLdense3 = Dense(16, activation='relu', kernel_initializer='RandomUniform',
@@ -115,7 +136,7 @@ class Tau_Model():
         unroll = False
 
         # HL Layers
-        HL_input = Input(shape=(10,))
+        HL_input = Input(shape=(11,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HL_input)
         HLdense2 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
@@ -159,7 +180,7 @@ class Tau_Model():
         unroll = False
 
         # HL Layers
-        HL_input = Input(shape=(10,))
+        HL_input = Input(shape=(11,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HL_input)
         HLdense2 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
@@ -214,7 +235,7 @@ class Tau_Model():
 
     def Model_Fit(self, batch_size, epochs, validation_split, model="RNNmodel", inputs="RNNmodel"):
         if type(model) == str:
-            self.history = self.RNNmodel.fit(self.inputs, self.y, batch_size=batch_size, epochs=epochs, verbose=1, validation_split=validation_split)
+            self.history = self.RNNmodel.fit(self.inputs, self.y, sample_weight=self.w_train, batch_size=batch_size, epochs=epochs, verbose=1, validation_split=validation_split)
             self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
             print(self.history.history.keys())
         else:
@@ -223,8 +244,8 @@ class Tau_Model():
             model.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
             print(self.history.history.keys())
 
-    def evaluate_model(self, inputs, outputs, model, batch_size=256):
-        results = model.evaluate(inputs, outputs, batch_size=batch_size)
+    def evaluate_model(self, inputs, outputs, weights, model, batch_size=256):
+        results = model.evaluate(inputs, outputs, sample_weight=weights, batch_size=batch_size)
         print("test loss, test acc:", results)
         print("TrueTau/FakeTau", results[3]/(results[3]+results[4]))
         print("Taus Not IDed : ", results[5])
@@ -236,13 +257,13 @@ class Tau_Model():
 
         bin_edges[0] = 20.0  # 20 GeV lower limit
         bin_edges[-1] = 1000.0  # 10000 GeV upper limit
-        print(bin_edges)
+        #print(bin_edges)
         # Reweighting coefficient
         sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=True)
         bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=True)
 
         coeff = sig_hist / bkg_hist
-        print(coeff)
+        #print(coeff)
         # Apply reweighting
         sig_weight = np.ones_like(sig_pt)
         bkg_weight = coeff[np.digitize(bkg_pt, bin_edges) - 1].astype(np.float32)
@@ -266,6 +287,12 @@ class Tau_Model():
         self.predictions = model.predict(self.eval_inputs)
         jet_pt = self.eval_inputs[2][:, 0]
         return self.eval_y, self.predictions, jet_pt
+
+    def predict_back(self, model):
+        self.back_predictions = model.predict(self.eval_back_inputs)
+        jet_pt = self.eval_back_inputs[2][:, 0]
+        print("real taus: {}".format(len(self.eval_back_y[self.eval_back_y==1])))
+        return self.eval_back_y, self.back_predictions, jet_pt
 
     def get_score_weights(self):
         sig = self.eval_jet_pt[self.eval_sigbck_index == 's']
@@ -300,6 +327,8 @@ class Tau_Model():
 
     def plot_feature_heatmap(self, features, model):
         plt.figure(figsize=(40,5))
-        plt.imshow(model.coefs_[0], interpolation='none', cmap='viridis')
+        plt.imshow(model.get_weights(), interpolation='none', cmap='viridis')
         plt.yticks(len(features), features)
-        plt.xlabel()
+        plt.xlabel("Columns in weight matrix")
+        plt.ylabel("Input feature")
+        plt.colorbar()

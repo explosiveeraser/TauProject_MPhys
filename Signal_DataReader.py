@@ -121,7 +121,7 @@ class Signal(Dataset):
         for prong in {'1-Prong', '3-Prong'}:
             tot_ntr = 0
             tot_nto = 0
-            name = fname+prong
+            name = fname + prong
             MaxNtrack = 500
             MaxNtower = 500
             jet_entry = array('i', [0])
@@ -137,26 +137,27 @@ class Signal(Dataset):
             jet_frac_trEM_pt = array('f', [0.])
             jet_mass_track_EM_system = array('f', [0.])
             jet_mass_track_system = array('f', [0.])
+            jet_trans_impact_param_sig = array('f', [0.])
             jet_TruthTau = array('i', [0])
             nTrack = array('i', [0])
             nTower = array('i', [0])
-            track_entry = array('i', MaxNtrack*[0])
-            track_PT = array('f', MaxNtrack*[0.])
-            track_index = array('i', MaxNtrack*[0])
-            track_D0 = array('f', MaxNtrack*[0.])
-            track_DZ = array('f', MaxNtrack*[0.])
-            track_deltaEta = array('f', MaxNtrack*[0.])
-            track_deltaPhi = array('f', MaxNtrack*[0.])
-            tower_entry = array('i', MaxNtower*[0])
-            tower_ET = array('f', MaxNtower*[0.])
-            tower_Edges0 = array('f', MaxNtower*[0.])
-            tower_Edges1 = array('f', MaxNtower*[0.])
-            tower_Edges2 = array('f', MaxNtower*[0.])
-            tower_Edges3 = array('f', MaxNtower*[0.])
-            tower_deltaEta = array('f', MaxNtower*[0.])
-            tower_deltaPhi = array('f', MaxNtower*[0.])
-            file = ROOT.TFile("NewTTrees/"+str(fname)+"_"+prong+".root", "RECREATE")
-            tree = ROOT.TTree(fname, str(fname+"_"+prong+" Tree"))
+            track_entry = array('i', MaxNtrack * [0])
+            track_PT = array('f', MaxNtrack * [0.])
+            track_index = array('i', MaxNtrack * [0])
+            track_D0 = array('f', MaxNtrack * [0.])
+            track_DZ = array('f', MaxNtrack * [0.])
+            track_deltaEta = array('f', MaxNtrack * [0.])
+            track_deltaPhi = array('f', MaxNtrack * [0.])
+            tower_entry = array('i', MaxNtower * [0])
+            tower_ET = array('f', MaxNtower * [0.])
+            tower_Edges0 = array('f', MaxNtower * [0.])
+            tower_Edges1 = array('f', MaxNtower * [0.])
+            tower_Edges2 = array('f', MaxNtower * [0.])
+            tower_Edges3 = array('f', MaxNtower * [0.])
+            tower_deltaEta = array('f', MaxNtower * [0.])
+            tower_deltaPhi = array('f', MaxNtower * [0.])
+            file = ROOT.TFile("NewTTrees/" + str(fname) + "_" + prong + ".root", "RECREATE")
+            tree = ROOT.TTree(fname, str(fname + "_" + prong + " Tree"))
             tree.Branch("jet_entry", jet_entry, "jet_entry/I")
             tree.Branch("jet_index", jet_index, "jet_index/I")
             tree.Branch("jet_weight", jet_weight, "jet_weight/F")
@@ -170,6 +171,7 @@ class Signal(Dataset):
             tree.Branch("jet_frac_trEM_pt", jet_frac_trEM_pt, "jet_frac_trEM_pt/F")
             tree.Branch("jet_mass_track_EM_system", jet_mass_track_EM_system, "jet_mass_track_EM_system/F")
             tree.Branch("jet_mass_track_system", jet_mass_track_system, "jet_mass_track_system/F")
+            tree.Branch("jet_trans_impact_param_sig", jet_trans_impact_param_sig, 'jet_trans_impact_param_sig/F')
             tree.Branch("nTrack", nTrack, "nTrack/I")
             tree.Branch("nTower", nTower, "nTower/I")
             tree.Branch("track_entry", track_entry, "track_entry[nTrack]/I")
@@ -190,7 +192,7 @@ class Signal(Dataset):
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             for jet in tqdm(self.JetArray):
                 if jet.PT >= 10.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(
-                        jet.Towers) >= 1 and jet.TruthTau[prong] is True:
+                        jet.Towers) >= 1 and jet.TruthTau[prong]:
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)
                     jet_weight[0] = jet.weight
@@ -204,6 +206,7 @@ class Signal(Dataset):
                     jet_frac_trEM_pt[0] = jet.frac_trEM_jet_pt
                     jet_mass_track_EM_system[0] = jet.mass_trackplusEM
                     jet_mass_track_system[0] = jet.mass_of_system
+                    jet_trans_impact_param_sig[0] = jet.max_trans_impact_param
                     jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
@@ -213,7 +216,7 @@ class Signal(Dataset):
                     tot_nto += n_to
                     for idx in range(0, n_tr):
                         con_track = jet.Tracks[idx]
-                        track_entry[idx] = 3#con_track.entry
+                        track_entry[idx] = 3  # con_track.entry
                         track_index[idx] = con_track.idx
                         track_PT[idx] = con_track.PT
                         track_D0[idx] = con_track.D0
@@ -222,7 +225,7 @@ class Signal(Dataset):
                         track_deltaPhi[idx] = con_track.deltaPhi
                     for jdx in range(0, n_to):
                         con_tower = jet.Towers[jdx]
-                        tower_entry[jdx] = 5#con_tower.entry
+                        tower_entry[jdx] = 5  # con_tower.entry
                         tower_ET[jdx] = con_tower.ET
                         tower_Edges0[jdx] = con_tower.Edges[0]
                         tower_Edges1[jdx] = con_tower.Edges[1]
@@ -231,7 +234,7 @@ class Signal(Dataset):
                         tower_deltaEta[jdx] = con_tower.deltaEta
                         tower_deltaPhi[jdx] = con_tower.deltaPhi
                     tree.Fill()
-            print("Total number of tracks in this tree are: "+str(tot_ntr))
+            print("Total number of tracks in this tree are: " + str(tot_ntr))
             print("Total number of towers in this tree are: " + str(tot_nto))
             tree.Print()
             tree.Write()
