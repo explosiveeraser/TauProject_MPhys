@@ -113,21 +113,27 @@ class Tau_Model():
         self.eval_back_inputs = [trb[t], tob[t], jb[t]]
         self.RNN_Model()
         #self.basic_Model()
-        #self.RNN_ModelwoTowers()
+        self.RNN_ModelwoTowers()
 
     def basic_Model(self):
         HL_input = Input(shape=(11,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer='RandomUniform',
                          bias_initializer='zeros')(HL_input)
-        HLdense3 = Dense(16, activation='relu', kernel_initializer='RandomUniform',
+        HLdense2 = Dense(128, activation='relu', kernel_initializer='RandomUniform',
                          bias_initializer='zeros')(HLdense1)
+        HLdense3 = Dense(64, activation='relu', kernel_initializer='RandomUniform',
+                         bias_initializer='zeros')(HLdense2)
+        HLdense4 = Dense(32, activation='relu', kernel_initializer='RandomUniform',
+                         bias_initializer='zeros')(HLdense3)
+        HLdense5 = Dense(16, activation='relu', kernel_initializer='RandomUniform',
+                         bias_initializer='zeros')(HLdense4)
         Output = Dense(1, activation='sigmoid', kernel_initializer='RandomUniform',
                        bias_initializer='zeros')(HLdense3)
         self.basic_model = Model(inputs=[HL_input], outputs=Output)
         self.basic_model.summary()
         plot_model(self.basic_model, to_file="basic_Model.png", show_shapes=True, show_layer_names=True)
         self.basic_model.compile(optimizer=SGD(learning_rate=0.01, momentum=0.9, nesterov=True), loss="binary_crossentropy",
-                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives'])
+                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives', "FalseNegatives", "TrueNegatives"])
 
     def RNN_ModelwoTowers(self):
         backwards = False
@@ -142,10 +148,10 @@ class Tau_Model():
         HLdense3 = Dense(16, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HLdense2)
         # Track Layers
-        Track_input1 = Input(shape=(None, 5))
+        Track_input1 = Input(shape=(None, 3))
         maskedTrack = Masking()(Track_input1)
         # Track_input2 = Input(shape=(10,))
-        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, 5), kernel_initializer = 'RandomUniform',
+        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, 3), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
         trackDense2 = Dense(32, activation='relu', input_shape=(None, None, 32), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
@@ -169,8 +175,8 @@ class Tau_Model():
         self.RNNmodel_woTower.summary()
         plot_model(self.RNNmodel_woTower, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
         #SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
-        self.RNNmodel_woTower.compile(optimizer='adam', loss="binary_crossentropy",
-                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives'])
+        self.RNNmodel_woTower.compile(optimizer=SGD(learning_rate=0.01, momentum=0.9, nesterov=True), loss="binary_crossentropy",
+                         metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives', "FalseNegatives", "TrueNegatives"])
 
 
     def RNN_Model(self):
@@ -197,9 +203,9 @@ class Tau_Model():
         trackSD2 = TimeDistributed(trackDense2)(trackSD1)
         # mergeTrack = Concatenate()([trackSD1, trackSD2])
         # flatten = TimeDistributed(Flatten())(trackSD2)
-        trackLSTM1 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
+        trackLSTM1 = LSTM(32, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(trackSD2)
-        trackLSTM2 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=False, kernel_initializer = 'RandomUniform',
+        trackLSTM2 = LSTM(32, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=False, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(trackLSTM1)
         # Tower Layers
         Tower_input1 = Input(shape=(None, 3))
@@ -212,9 +218,9 @@ class Tau_Model():
         towerSD1 = TimeDistributed(towerDense1)(maskedTower)
         towerSD2 = TimeDistributed(towerDense2)(towerSD1)
         # towerFlatten = TimeDistributed(Flatten())(towerSD2)
-        towerLSTM1 = LSTM(24, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
+        towerLSTM1 = LSTM(24, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(towerSD2)
-        towerLSTM2 = LSTM(24, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 24), return_sequences=False, kernel_initializer = 'RandomUniform',
+        towerLSTM2 = LSTM(24, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 24), return_sequences=False, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(towerLSTM1)
         # Layers Merged
         mergedLayer = Concatenate()([trackLSTM2, towerLSTM2, HLdense3])
@@ -232,21 +238,20 @@ class Tau_Model():
                          metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives', "FalseNegatives", "TrueNegatives"])
 
     def Model_Fit(self, batch_size, epochs, validation_split, model="RNNmodel", inputs="RNNmodel"):
+        # Setup Callbacks
+        callbacks = []
+
+        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=35, verbose=1)
+        callbacks.append(early_stopping)
+
+        model_checkpoint = ModelCheckpoint(
+            "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
+        callbacks.append(model_checkpoint)
+
+        reduce_lr = ReduceLROnPlateau(patience=8, verbose=1, min_lr=1e-4)
+        callbacks.append(reduce_lr)
+        # End of setup callbacks
         if type(model) == str:
-            #Setup Callbacks
-            callbacks = []
-
-            early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1)
-            callbacks.append(early_stopping)
-
-            model_checkpoint = ModelCheckpoint(
-                "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
-            callbacks.append(model_checkpoint)
-
-            reduce_lr = ReduceLROnPlateau(patience=6, verbose=1, min_lr=1e-4)
-            callbacks.append(reduce_lr)
-            #End of setup callbacks
-
             self.history = self.RNNmodel.fit(self.inputs, self.y, sample_weight=self.w_train, batch_size=batch_size,
                                              epochs=epochs, verbose=1, validation_split=validation_split, callbacks=callbacks)
 
@@ -254,15 +259,16 @@ class Tau_Model():
             self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
             print(self.history.history.keys())
         else:
-            self.history = model.fit(inputs, self.y, batch_size=batch_size, epochs=epochs, verbose=1,
-                                             validation_split=validation_split)
+            self.history = model.fit(inputs, self.y, sample_weight=self.w_train,  batch_size=batch_size, epochs=epochs, verbose=1,
+                                             validation_split=validation_split, callbacks=callbacks)
             model.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
             print(self.history.history.keys())
 
     def evaluate_model(self, inputs, outputs, weights, model, batch_size=256):
         results = model.evaluate(inputs, outputs, sample_weight=weights, batch_size=batch_size)
         print("test loss, test acc:", results)
-        print("TrueTau/FakeTau", results[3]/(results[3]+results[4]))
+        if results[3]+results[4] > 0.:
+            print("TrueTau/FakeTau", results[3]/(results[3]+results[4]))
         print("Taus Not IDed : ", results[5])
         print("Total Taus: ",results[3]+results[4]+results[5])
 
@@ -285,8 +291,8 @@ class Tau_Model():
 
         return sig_weight, bkg_weight
 
-    def get_train_scores(self, model):
-        train_y = model.predict(self.inputs)
+    def get_train_scores(self, model, inputs):
+        train_y = model.predict(inputs)
         return self.y, train_y
 
     def get_train_score_weights(self):
@@ -300,14 +306,20 @@ class Tau_Model():
         new_arr[self.train_sigbck_index == 'b'] = bck_w
         return new_arr
 
-    def predict(self, model):
-        self.predictions = model.predict(self.eval_inputs)
-        jet_pt = self.eval_inputs[2][:, 0]
+    def predict(self, model, inputs):
+        self.predictions = model.predict(inputs)
+        if len(inputs) > 3:
+            jet_pt = inputs[:, 0]
+        else:
+            jet_pt = inputs[2][:, 0]
         return self.eval_y, self.predictions, jet_pt
 
-    def predict_back(self, model):
-        self.back_predictions = model.predict(self.eval_back_inputs)
-        jet_pt = self.eval_back_inputs[2][:, 0]
+    def predict_back(self, model, inputs):
+        self.back_predictions = model.predict(inputs)
+        if len(inputs) > 3:
+            jet_pt = inputs[:, 0]
+        else:
+            jet_pt = inputs[2][:, 0]
         print("real taus: {}".format(len(self.eval_back_y[self.eval_back_y==1])))
         return self.eval_back_y, self.back_predictions, jet_pt
 

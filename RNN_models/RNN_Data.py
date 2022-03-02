@@ -603,7 +603,7 @@ class RNN_Data():
         jet_untrans = {}
         track_untrans = {}
         tower_untrans = {}
-        b_cs = tree2array(backtree, branches=["jet_cross_section"]).astype(np.float32) / 10000
+        b_cs = tree2array(backtree, branches=["jet_cross_section"]).astype(np.float32) / 50000
         s_cs = tree2array(sigtree, branches=["jet_cross_section"]).astype(np.float32)
         s_cs = np.ones_like(s_cs)
         #b_cs = np.ones_like(b_cs)

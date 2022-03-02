@@ -207,7 +207,7 @@ class Plots():
         eff, rej = self.roc(self.real_y, self.pred_y)
         fig, ax = plt.subplots()
         ax.plot(eff, rej, color='g', label='Delphes Tau RNN')
-        ax.set_ylim(self.ylim)
+        #ax.set_ylim(self.ylim)
         ax.set_xlim((0., 1.))
         ax.set_yscale("log")
         ax.set_xlabel("Signal efficiency", x=1, ha="right")

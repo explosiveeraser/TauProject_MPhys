@@ -41,7 +41,39 @@ import root_numpy as rn
 from Plots import Plots
 
 
-DataP1 = RNN_Data(1, True, "prong1_data", print_hists=False, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
+def plot_histogram(name, sig_data, bck_data, sig_weight, bck_weight, num_bins):
+    if np.max(bck_data) <= np.max(sig_data):
+        hist_max = np.max(sig_data)
+    else:
+        hist_max = np.max(bck_data)
+    if np.min(bck_data) >= np.min(sig_data):
+        hist_min = np.max(sig_data)
+    else:
+        hist_min = np.max(bck_data)
+    bck_hist = ROOT.TH1D("{}_BACK".format(name), "{}_BACK".format(name), num_bins, hist_min, hist_max)
+    sig_hist = ROOT.TH1D("{}_SIG".format(name), "{}_SIG".format(name), num_bins, hist_min, hist_max)
+    rn.fill_hist(bck_hist, bck_data, weights=bck_weight)
+    rn.fill_hist(sig_hist, sig_data, weights=sig_weight)
+    canvas = ROOT.TCanvas("Hist_Data_{}".format(name), "Hist_Data_{}".format(name))
+    canvas.Divide(1, 1)
+    canvas.cd(1)
+    bck_integral = bck_hist.Integral()
+    sig_integral = sig_hist.Integral()
+    if bck_integral != 0. and sig_integral != 0.:
+        bck_hist.Scale(1/bck_integral)
+        sig_hist.Scale(1/sig_integral)
+    bck_hist.Draw("HIST")
+    sig_hist.SetLineColor(ROOT.kRed)
+    sig_hist.Draw("HIST SAMES0")
+    legend = ROOT.TLegend(0.05, 0.85, 0.2, 0.95)
+    legend.AddEntry(bck_hist, "Back {} Histogram".format(name))
+    legend.AddEntry(sig_hist, "Signal {} Histogram".format(name))
+    legend.Draw()
+    canvas.Update()
+    canvas.Print("{}_back_sig.pdf".format(name))
+
+
+DataP1 = RNN_Data(1, True, "prong1_data", print_hists=True, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 
@@ -55,9 +87,16 @@ do_RNN = True
 if do_RNN:
     Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:6,:], DataP1.input_tower[:,0:10,:], DataP1.input_jet[:, 1:12]], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain, DataP1.new_weights)
 
+    #print(DataP1.input_jet[0,1:12])
+
+    bck_weight = DataP1.new_weights[0:168800]
+    sig_weight = DataP1.new_weights[-17212:-1]
+
+    plot_histogram("new_weights", sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
+
     #Prong1Model.Model_Fit(256, 40, 0.3, model=Prong1Model.basic_model, inputs=[Prong1Model.inputs[2]])
     #Prong1Model.Model_Fit(256, 40, 0.3, model=Prong1Model.RNNmodel_woTower, inputs=[Prong1Model.inputs[0], Prong1Model.inputs[2]])
-    Prong1Model.Model_Fit(256, 1000, 0.1)
+    Prong1Model.Model_Fit(256, 1000, 0.1, model=Prong1Model.RNNmodel, inputs=Prong1Model.inputs)#, #model=Prong1Model.basic_model, inputs=Prong1Model.inputs[2][:, 0:11])
 
     #Prong1Model.evaluate_model([DataP1.all_track[:, 0:6, :], DataP1.all_tower[:,0:10,:], DataP1.all_jet], DataP1.all_label, Prong1Model.RNNmodel)
 
@@ -67,7 +106,7 @@ if do_RNN:
 
     #Prong1Model.plot_accuracy()
 
-    train_real_y, train_pred_y = Prong1Model.get_train_scores(Prong1Model.RNNmodel)
+    train_real_y, train_pred_y = Prong1Model.get_train_scores(Prong1Model.RNNmodel, Prong1Model.inputs)
     train_weights = Prong1Model.get_train_score_weights()
 
     # Prong1Model.plot_feature_heatmap({"track_PT", "track_D0", "track_DZ", "track_deltaEta",
@@ -77,10 +116,10 @@ if do_RNN:
 
     Prong1Model.evaluate_model(Prong1Model.eval_inputs, Prong1Model.eval_y, Prong1Model.eval_w, Prong1Model.RNNmodel)
 
-    real_y, pred_y, jet_pt = Prong1Model.predict(Prong1Model.RNNmodel)
+    real_y, pred_y, jet_pt = Prong1Model.predict(Prong1Model.RNNmodel, Prong1Model.eval_inputs)
     #print(pred_y)
 
-    back_real_y, back_pred_y, back_jet_pt = Prong1Model.predict_back(Prong1Model.RNNmodel)
+    back_real_y, back_pred_y, back_jet_pt = Prong1Model.predict_back(Prong1Model.RNNmodel, Prong1Model.eval_back_inputs)
 
     #weights = Prong1Model.get_score_weights()
 
