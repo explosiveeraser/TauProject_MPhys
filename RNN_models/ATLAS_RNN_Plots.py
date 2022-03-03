@@ -133,15 +133,15 @@ class ScorePlot(Plot):
         # Plot
         fig, ax = plt.subplots()
         if self.train:
-            ax.hist(sig_train["score"], weights=sig_train_weight,
+            ax.hist(sig_train, weights=sig_train_weight,
                     color=colors["green"], label="Sig. train", **self.histopt)
-            ax.hist(bkg_train["score"], weights=bkg_train_weight,
+            ax.hist(bkg_train, weights=bkg_train_weight,
                     color=colors["violet"], label="Bkg. train", **self.histopt)
 
         if self.test:
-            ax.hist(sig_test["score"], weights=sig_test_weight,
+            ax.hist(sig_test, weights=sig_test_weight,
                     color=colors["red"], label="Sig. test", **self.histopt)
-            ax.hist(bkg_test["score"], weights=bkg_test_weight,
+            ax.hist(bkg_test, weights=bkg_test_weight,
                     color=colors["blue"], label="Bkg. test", **self.histopt)
 
         if self.log_y:

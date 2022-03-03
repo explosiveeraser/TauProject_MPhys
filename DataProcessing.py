@@ -18,7 +18,12 @@ delphes install library directory
 #Convention Signal First and Background Second
 class DataProcessing():
 
-    def __init__(self, SigDir, BackDir, print_hists=True):
+    def __init__(self, SigDir, BackDir, Sig_wPU, print_hists=True):
+        #PileUp Processed
+        self.signal_wPU = Signal(Sig_wPU, print_hist=False)
+        self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
+
+        #None PileUp Processed
         self.signal = Signal(SigDir, print_hist=False)
         self.background = Background(BackDir, print_hist=False)
         self.signal.write_taucan_ttree("signal_tree")

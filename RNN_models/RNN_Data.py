@@ -105,17 +105,18 @@ class RNN_Data():
                 self.fill_untrans_hists(jet_untrans, track_untrans, tower_untrans, yval, new_weights)
                 self.fill_trans_hists(jet_trans, track_trans, tower_trans, yval, new_weights)
                 self.plot_hists()
-
-            self.bck_pt = self.bck_pt[0:168800]
-            self.sig_pt = self.sig_pt[-17212:-1]
-            self.jet_pt = np.append(self.jet_pt[0:168800], self.jet_pt[-17212:-1], axis=0)
-            self.cross_section = np.append(self.cross_section[0:168800], self.cross_section[-17212:-1], axis=0)
-            self.pt_weights = np.append(self.pt_weights[0:168800], self.pt_weights[-17212:-1], axis=0)
-            self.new_weights = np.append(self.new_weights[0:168800], self.new_weights[-17212:-1], axis=0)
-            self.input_jet = np.append(jet_arr[0:168800], jet_arr[-17212:-1], axis=0)
-            self.input_track = np.append(track_arr[0:168800], track_arr[-17212:-1], axis=0)
-            self.input_tower = np.append(tower_arr[0:168800], tower_arr[-17212:-1], axis=0)
-            self.Ytrain = np.append(label[0:168800], label[-17212:-1], axis=0)
+            self.length_bck = len(self.bck_pt) - 100
+            self.length_sig = len(self.sig_pt) - 100
+            self.bck_pt = self.bck_pt[0:self.length_bck]
+            self.sig_pt = self.sig_pt[-self.length_sig:-1]
+            self.jet_pt = np.append(self.jet_pt[0:self.length_bck], self.jet_pt[-self.length_sig:-1], axis=0)
+            self.cross_section = np.append(self.cross_section[0:self.length_bck], self.cross_section[-self.length_sig:-1], axis=0)
+            self.pt_weights = np.append(self.pt_weights[0:self.length_bck], self.pt_weights[-self.length_sig:-1], axis=0)
+            self.new_weights = np.append(self.new_weights[0:self.length_bck], self.new_weights[-self.length_sig:-1], axis=0)
+            self.input_jet = np.append(jet_arr[0:self.length_bck], jet_arr[-self.length_sig:-1], axis=0)
+            self.input_track = np.append(track_arr[0:self.length_bck], track_arr[-self.length_sig:-1], axis=0)
+            self.input_tower = np.append(tower_arr[0:self.length_bck], tower_arr[-self.length_sig:-1], axis=0)
+            self.Ytrain = np.append(label[0:self.length_bck], label[-self.length_sig:-1], axis=0)
         elif load_pickled_data:
             #print(rn.root2array("../NewTTrees/{}.root".format(BacktreeFile), treename="{}{}".format(BackTreeName, BackendPartOfTree), branches=["track_PT"]))
             file = open(pickle_file, "rb")
@@ -144,21 +145,23 @@ class RNN_Data():
             seed = np.random.randint(1, 9999)
             rng = np.random.default_rng(seed)
             np.random.seed(seed)
+            self.length_bck = len(self.bck_pt) - 100
+            self.length_sig = len(self.sig_pt) - 100
             self.all_jet = temp_jet
             self.all_track = temp_track
             self.all_tower = temp_tower
             self.all_label = temp_labels
             self.jet_pt = np.append(self.bck_pt, self.sig_pt)
-            self.bck_pt = self.bck_pt[0:168800]
-            self.sig_pt = self.sig_pt[-17212:-1]
-            self.jet_pt = np.append(self.jet_pt[0:168800], self.jet_pt[-17212:-1], axis=0)
-            self.cross_section = np.append(self.cross_section[0:168800], self.cross_section[-17212:-1], axis=0)
-            self.pt_weights = np.append(self.pt_weights[0:168800], self.pt_weights[-17212:-1], axis=0)
-            self.new_weights = np.append(self.new_weights[0:168800], self.new_weights[-17212:-1], axis=0)
-            self.input_jet = np.append(temp_jet[0:168800], temp_jet[-17212:-1], axis=0)
-            self.input_track = np.append(temp_track[0:168800], temp_track[-17212:-1], axis=0)
-            self.input_tower = np.append(temp_tower[0:168800], temp_tower[-17212:-1], axis=0)
-            self.Ytrain = np.append(temp_labels[0:168800], temp_labels[-17212:-1], axis=0)
+            self.bck_pt = self.bck_pt[0:self.length_bck]
+            self.sig_pt = self.sig_pt[-self.length_sig:-1]
+            self.jet_pt = np.append(self.jet_pt[0:self.length_bck], self.jet_pt[-self.length_sig:-1], axis=0)
+            self.cross_section = np.append(self.cross_section[0:self.length_bck], self.cross_section[-self.length_sig:-1], axis=0)
+            self.pt_weights = np.append(self.pt_weights[0:self.length_bck], self.pt_weights[-self.length_sig:-1], axis=0)
+            self.new_weights = np.append(self.new_weights[0:self.length_bck], self.new_weights[-self.length_sig:-1], axis=0)
+            self.input_jet = np.append(temp_jet[0:self.length_bck], temp_jet[-self.length_sig:-1], axis=0)
+            self.input_track = np.append(temp_track[0:self.length_bck], temp_track[-self.length_sig:-1], axis=0)
+            self.input_tower = np.append(temp_tower[0:self.length_bck], temp_tower[-self.length_sig:-1], axis=0)
+            self.Ytrain = np.append(temp_labels[0:self.length_bck], temp_labels[-self.length_sig:-1], axis=0)
 
     # TRACK_ARRAY: ['[index]',[P], [PT], [L], [D0], [DZ], [e], [e], [deltaEta], [deltaPhi], [deltaR]]
     # TOWER_ARRAY: ['[index]',[E], [ET], [Eta], [Phi], [Edges0], [Edges1], [Edges2], [Edges3], [Eem], [Ehad], [T],
@@ -167,7 +170,7 @@ class RNN_Data():
     def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
         # Binning
         bin_edges = np.percentile(bkg_pt, np.linspace(0.0, 100.0, 50))
-
+        print(bin_edges)
         bin_edges[0] = 20.0  # 20 GeV lower limit
         bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         #print(bin_edges)
@@ -605,8 +608,8 @@ class RNN_Data():
         track_untrans = {}
         tower_untrans = {}
         b_cs = tree2array(backtree, branches=["jet_cross_section"]).astype(np.float32) / 50000
-        s_cs = tree2array(sigtree, branches=["jet_cross_section"]).astype(np.float32)
-        s_cs = np.ones_like(s_cs)
+        s_cs = tree2array(sigtree, branches=["jet_cross_section"]).astype(np.float32) / 0.00321
+        #s_cs = np.ones_like(s_cs)
         #b_cs = np.ones_like(b_cs)
         cross_section = np.append(b_cs, s_cs).astype(np.float32)
         #cross_section = np.ones_like(cross_section)
@@ -629,9 +632,11 @@ class RNN_Data():
                         if jet_var in ["jet_PT"]:
                             self.sig_pt = sigjet
                             self.bck_pt = backjet
+                            s_cs = np.ones_like(s_cs)
+                            b_cs = np.ones_like(b_cs)
                             sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs)
                             self.pt_weights = np.append(bck_pt_w, sig_pt_w, axis=0)
-                            self.new_weights = self.pt_weights * cross_section
+                            self.new_weights = cross_section * self.pt_weights
                             jet[jet_var] = self.log_epsilon(jet[jet_var])
                             jet["untrans_jet_PT"] = jet_untrans[jet_var]
                         elif jet_var in ["jet_f_cent", "jet_iF_leadtrack"]:

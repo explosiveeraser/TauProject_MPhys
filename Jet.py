@@ -26,6 +26,7 @@ class Jet_():
             self.jet_obj = jet_obj
         else:
             self.jet_obj = None
+        self.delphes_TauTag = jet_obj.TauTag
         self.PT = jet_obj.PT
         self.Eta = jet_obj.Eta
         self.Phi = jet_obj.Phi
@@ -63,6 +64,8 @@ class Jet_():
         self.mass_track_EM_system()
         self.Mass_Track_System()
         self.Trans_Impact_Param_Sign()
+        # if self.numTaus > 0:
+        #     print("Jet has {} Taus in it.".format(self.numTaus))
 
     def _Find_Particles(self, evt_particles):
         num_particles = len(evt_particles)

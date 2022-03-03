@@ -20,7 +20,7 @@ from ROOT import addressof
 import ctypes
 
 
-ROOT.gSystem.Load("../Delphes-3.5.0/libDelphes.so")
+ROOT.gSystem.Load("../Delphes-3.5.0/build/libDelphes.so")
 
 try:
   ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
@@ -30,7 +30,7 @@ except:
 
 class Signal(Dataset):
 
-    def __init__(self, directory, conf_fname="Hist_Config", print_hist=True):
+    def __init__(self, directory, conf_fname="Hist_Config", print_hist=True, pile_up=False):
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -40,8 +40,14 @@ class Signal(Dataset):
         self.chain = ROOT.TChain("Delphes")
         for f in os.listdir(directory):
             self.chain.Add(directory + f)
-        self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track",
-                                 "Tower"]
+        self.pile_up = pile_up
+        if not pile_up:
+            self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track",
+                                     "Tower"]
+        elif pile_up:
+            self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT",
+                                     "Track",
+                                     "Tower", "PileUpMix"]
         self._reader = ROOT.ExRootTreeReader(self.chain)
         self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
         for branch in self._branches:
@@ -55,9 +61,14 @@ class Signal(Dataset):
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
         self._nev = self._reader.GetEntries()
-        for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
-            self._branchReader[branch] = self._reader.UseBranch(branch)
-            self.num_of_object[branch] = 0
+        if not pile_up:
+            for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
+                self._branchReader[branch] = self._reader.UseBranch(branch)
+                self.num_of_object[branch] = 0
+        elif pile_up:
+            for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower", "PileUpMix"}:
+                self._branchReader[branch] = self._reader.UseBranch(branch)
+                self.num_of_object[branch] = 0
         self.num_of_object["Tower"] = 0
         self.JetArray = []
         print("Reading in physics objects.")
@@ -72,13 +83,22 @@ class Signal(Dataset):
             tracks = []
             towers = []
             particles = []
+            if pile_up:
+                pileup_particles = []
             num_tracks = self._branchReader["Track"].GetEntries()
             num_towers = self._branchReader["Tower"].GetEntries()
             num_particles = self._branchReader["Particle"].GetEntries()
+            if pile_up:
+                num_pileup = self._branchReader["PileUpMix"].GetEntries()
             for ldx in range(0, num_particles):
                 particle = self._branchReader["Particle"].At(ldx)
-                evt_particle = Particle_(entry, evt, particle, self._branchReader["Particle"], hists=print_hist)
+                evt_particle = Particle_(entry, evt, particle, self._branchReader["Particle"], particle.PID,hists=print_hist)
                 particles.append(evt_particle)
+            if pile_up:
+                for ldx in range(0, num_particles):
+                    pileup_part = self._branchReader["PileUpMix"].At(ldx)
+                    evt_pileup_part = Particle_(entry, evt, pileup_part, self._branchReader["PileUpMix"], pileup_part.PID, hists=print_hist)
+                    particles.append(evt_pileup_part)
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
                 evt_track = Track_(entry, jdx, evt, weight, track, track.Particle.GetObject(), hists=print_hist)
@@ -141,6 +161,7 @@ class Signal(Dataset):
             jet_mass_track_system = array('f', [0.])
             jet_trans_impact_param_sig = array('f', [0.])
             jet_TruthTau = array('i', [0])
+            jet_delphesTauTag = array('i', [0])
             nTrack = array('i', [0])
             nTower = array('i', [0])
             track_entry = array('i', MaxNtrack * [0])
@@ -196,9 +217,17 @@ class Signal(Dataset):
             tree.Branch("tower_deltaEta", tower_deltaEta, "tower_deltaEta[nTower]/F")
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
+            tree.Branch("jet_delphesTauTag", jet_delphesTauTag, "jet_delphesTauTag/I")
+            num_jet_wCC = 0
+            num_jet_woCC = 0
             for jet in tqdm(self.JetArray):
-                if jet.PT >= 20.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(
+                if jet.PT >= 20.0 and abs(jet.Eta) <= 2.5 and (
+                        abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1 and jet.TruthTau[prong]:
+                    num_jet_woCC += 1
+                if jet.PT >= 20.0 and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
+                        jet.Towers) >= 1 and jet.TruthTau[prong]:
+                    num_jet_wCC += 1
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)
                     jet_cross_section[0] = jet.cross_section
@@ -214,6 +243,7 @@ class Signal(Dataset):
                     jet_mass_track_system[0] = jet.mass_of_system
                     jet_trans_impact_param_sig[0] = jet.max_trans_impact_param
                     jet_TruthTau[0] = jet.TruthTau[prong].__int__()
+                    jet_delphesTauTag[0] = jet.delphes_TauTag.__int__()
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
                     nTrack[0] = n_tr
@@ -244,6 +274,8 @@ class Signal(Dataset):
                     tree.Fill()
             print("Total number of tracks in this tree are: " + str(tot_ntr))
             print("Total number of towers in this tree are: " + str(tot_nto))
+            print("Total tau jets with Charge condition: {}".format(num_jet_wCC))
+            print("Total tau jets without Charge cond: {}".format(num_jet_woCC))
             tree.Print()
             tree.Write()
             file.Write()

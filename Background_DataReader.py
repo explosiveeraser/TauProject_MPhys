@@ -18,7 +18,7 @@ from Tower import Tower_
 from Particle import Particle_
 import ctypes as c
 
-ROOT.gSystem.Load("/home/a/Delphes-3.5.0/libDelphes.so")
+ROOT.gSystem.Load("/home/a/Delphes-3.5.0/build/libDelphes.so")
 
 try:
   ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
@@ -28,7 +28,7 @@ except:
 
 class Background(Dataset):
 
-    def __init__(self, directory, conf_fname="Hist_Config", print_hist=True):
+    def __init__(self, directory, conf_fname="Hist_Config", print_hist=True, pile_up=False):
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -38,7 +38,14 @@ class Background(Dataset):
         self.chain = ROOT.TChain("Delphes")
         for f in os.listdir(directory):
             self.chain.Add(directory + f)
-        self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"]
+        self.pile_up = pile_up
+        if not pile_up:
+            self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track",
+                                     "Tower"]
+        elif pile_up:
+            self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT",
+                                     "Track",
+                                     "Tower", "PileUpMix"]
         self._reader = ROOT.ExRootTreeReader(self.chain)
         self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
         for branch in self._branches:
@@ -52,9 +59,16 @@ class Background(Dataset):
         self._Read_Hist_Config(conf_fname)
         self.Book_Histograms()
         self._nev = self._reader.GetEntries()
-        for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower"}:
-            self._branchReader[branch] = self._reader.UseBranch(branch)
-            self.num_of_object[branch] = 0
+        if not pile_up:
+            for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track",
+                           "Tower"}:
+                self._branchReader[branch] = self._reader.UseBranch(branch)
+                self.num_of_object[branch] = 0
+        elif pile_up:
+            for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track",
+                           "Tower", "PileUpMix"}:
+                self._branchReader[branch] = self._reader.UseBranch(branch)
+                self.num_of_object[branch] = 0
         self.num_of_object["Tower"] = 0
         self.JetArray = []
         print("Reading in physics objects.")
@@ -69,13 +83,22 @@ class Background(Dataset):
             tracks = []
             towers = []
             particles = []
+            if pile_up:
+                pileup_particles = []
             num_tracks = self._branchReader["Track"].GetEntries()
             num_towers = self._branchReader["Tower"].GetEntries()
             num_particles = self._branchReader["Particle"].GetEntries()
+            if pile_up:
+                num_pileup = self._branchReader["PileUpMix"].GetEntries()
             for ldx in range(0, num_particles):
                 particle = self._branchReader["Particle"].At(ldx)
-                evt_particle = Particle_(entry, evt, particle, self._branchReader["Particle"], hists=print_hist)
+                evt_particle = Particle_(entry, evt, particle, self._branchReader["Particle"], particle.PID,hists=print_hist)
                 particles.append(evt_particle)
+            if pile_up:
+                for ldx in range(0, num_particles):
+                    particle = self._branchReader["PileUpMix"].At(ldx)
+                    evt_particle = Particle_(entry, evt, particle, self._branchReader["PileUpMix"], particle.PID,hists=print_hist)
+                    particles.append(evt_particle)
             for jdx in range(0, num_tracks):
                 track = self._branchReader["Track"].At(jdx)
                 evt_track = Track_(entry, jdx, evt, weight, track, track.Particle.GetObject(), hists=print_hist)
@@ -194,7 +217,7 @@ class Background(Dataset):
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             for jet in tqdm(self.JetArray):
-                if jet.PT >= 20.0 and abs(jet.Eta) <= 2.5 and len(jet.Tracks) >= 1 and len(
+                if jet.PT >= 20.0 and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1:
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)

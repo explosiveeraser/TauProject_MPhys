@@ -16,7 +16,7 @@ Load delphes shared library located in
 delphes install library directory
 """
 
-ROOT.gSystem.Load("../Delphes-3.5.0/libDelphes.so")
+ROOT.gSystem.Load("../Delphes-3.5.0/build/libDelphes.so")
 
 try:
   ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
@@ -30,8 +30,9 @@ ROOT.gStyle.SetOptStat("ne")
 
 sig_dir = "Delphes_Signal/"
 back_dir = "Delphes_Background/"
+sig_wPU_dir = "Delphes_Signal_wPU/"
 
-Data = DataProcessing(sig_dir, back_dir)
+Data = DataProcessing(sig_dir, back_dir, sig_wPU_dir)
 
 print_hists = False
 

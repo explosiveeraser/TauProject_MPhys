@@ -110,7 +110,7 @@ def plot_graph(name, x_data, y_data, n_points):
     canvas.Update()
     canvas.Print("{}.pdf".format(name))
 
-DataP1 = RNN_Data(1, True, "prong1_data", print_hists=False, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
+DataP1 = RNN_Data(1, False, "prong1_data", print_hists=False, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 
@@ -130,19 +130,19 @@ if do_RNN:
     training_bck_pt = Prong1Model.train_jet_pt[Prong1Model.train_sigbck_index == "b"]
     train_s_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "s"]
     train_b_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "b"]
-    plot_2_histogram("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=1000.0)
+    plot_2_histogram("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=3300.0)
 
     eval_sig_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "s"]
     eval_bck_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "b"]
     eval_s_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "s"]
     eval_b_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "b"]
-    plot_2_histogram("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=1000.0)
+    plot_2_histogram("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=3300.0)
 
     sig_pt = DataP1.sig_pt
     bck_pt = DataP1.bck_pt
-    s_w = DataP1.new_weights[-17212:-1]
-    b_w = DataP1.new_weights[0:168800]
-    plot_2_histogram("dataproc_jet_pt", sig_pt, bck_pt, s_w, b_w, 50, hist_min=20., hist_max=1000.0)
+    s_w = DataP1.new_weights[-DataP1.length_sig:-1]
+    b_w = DataP1.new_weights[0:DataP1.length_bck]
+    plot_2_histogram("dataproc_jet_pt", sig_pt, bck_pt, s_w, b_w, 50, hist_min=20., hist_max=3300.0)
 
 
 
@@ -173,8 +173,8 @@ if do_RNN:
 
     #print(DataP1.input_jet[0,1:12])
 
-    bck_weight = DataP1.new_weights[0:168800]
-    sig_weight = DataP1.new_weights[-17212:-1]
+    bck_weight = DataP1.new_weights[0:DataP1.length_bck]
+    sig_weight = DataP1.new_weights[-DataP1.length_sig:-1]
 
     plot_2_histogram("new_weights", sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
 
@@ -230,6 +230,10 @@ if do_RNN:
     sig_train_score = Prong1Model.RNNmodel.predict([Prong1Model.inputs[0][Prong1Model.train_sigbck_index == "s"], Prong1Model.inputs[1][Prong1Model.train_sigbck_index == "s"], Prong1Model.inputs[2][Prong1Model.train_sigbck_index == "s"]])
     sig_train_score.flatten()
 
+    bkg_train_score = Prong1Model.RNNmodel.predict([Prong1Model.inputs[0][Prong1Model.train_sigbck_index == "b"], Prong1Model.inputs[1][Prong1Model.train_sigbck_index == "b"], Prong1Model.inputs[2][Prong1Model.train_sigbck_index == "b"]])
+    bkg_train_score.flatten()
+    bkg_train_weight = Prong1Model.w_train[Prong1Model.train_sigbck_index == "b"].flatten()
+
     sig_test_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "s"]
     sig_test_weight = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "s"]
 
@@ -241,6 +245,13 @@ if do_RNN:
 
     bkg_test_score = pred_y[Prong1Model.eval_sigbck_index == "b"]
     bkg_test_score.flatten()
+
+    #ATLAS Score Plot
+    rnn_score = ScorePlot(test=True, log_y=True)
+    rnn_score.plot(sig_train_score, bkg_train_score, sig_train_weight, bkg_train_weight,
+                   sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight)
+    plt.show()
+    input("Enter..")
 
     #Test ATLAS plotting algorithm
     FEP_tight = FlattenerEfficiencyPlot(sig_train_pt, sig_train_score, sig_test_pt, sig_test_score, 60/100)

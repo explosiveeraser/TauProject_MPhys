@@ -33,7 +33,7 @@ class Track_():
         self.ErrorD0 = track_obj.ErrorD0
         self.ErrorDZ = track_obj.ErrorDZ
         self.particle = track_particle
-        self.TruthTau = self.particle.PID == 15 or self.particle.PID == -15
+        #self.TruthTau = self.particle.PID == 15 or self.particle.PID == -15
         self.deltaEta = 0
         self.deltaPhi = 0
         self.deltaR = 0

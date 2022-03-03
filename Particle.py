@@ -11,16 +11,24 @@ from numba import jit, jit_module
 import os, os.path
 from tqdm import tqdm, trange
 
+ROOT.gSystem.Load("../Delphes-3.5.0/build/libDelphes.so")
+
+try:
+  ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
+  ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
+except:
+  pass
+
 class Particle_():
 
-    def __init__(self, entry, evt, particle, branch, hists=True):
+    def __init__(self, entry, evt, particle, branch, PID, hists=True):
         self.entry = entry
         self.event = evt
         if hists:
             self.particle_obj = particle
         else:
             self.particle_obj = None
-        PID = particle.PID
+        #PID = particle.PID
         self.PID = PID
         self.Eta = particle.Eta
         self.Phi = particle.Phi
@@ -34,6 +42,7 @@ class Particle_():
             daughters = self.getStableDaughters(branch, particle, [])
             #print(daughters)
             self.tau_prongness = sum([abs(d) for d in daughters])
+            #print("Tau Prongness is {}".format(self.tau_prongness))
             #print(self.tau_prongness)
         else:
             self.tau = False
