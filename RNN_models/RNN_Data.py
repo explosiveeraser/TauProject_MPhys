@@ -148,6 +148,7 @@ class RNN_Data():
             self.all_track = temp_track
             self.all_tower = temp_tower
             self.all_label = temp_labels
+            self.jet_pt = np.append(self.bck_pt, self.sig_pt)
             self.bck_pt = self.bck_pt[0:168800]
             self.sig_pt = self.sig_pt[-17212:-1]
             self.jet_pt = np.append(self.jet_pt[0:168800], self.jet_pt[-17212:-1], axis=0)

@@ -80,6 +80,10 @@ class Plots():
         self.jet_pt = jet_pt
         self.legend = legend
         self.name = name
+        eff, rej = self.roc(self.real_y, self.pred_y, sample_weight=self.weights)
+        # eff, rej = self.roc(self.real_y, self.pred_y)
+        self.eff = eff
+        self.rej = rej
 
     def plot_raw_score_vs_jetPT(self):
         fig, ax = plt.subplots(2)
@@ -178,10 +182,10 @@ class Plots():
     #     fig, ax = plt.subplots()
     #     ax.hist(self.tr)
 
-    def roc(self, y_true, y):
+    def roc(self, y_true, y, **kwargs):
         #**kwargs
-        #fpr, tpr, thr = roc_curve(y_true, y, **kwargs)
-        fpr, tpr, thr = roc_curve(y_true, y)
+        fpr, tpr, thr = roc_curve(y_true, y, **kwargs)
+        #fpr, tpr, thr = roc_curve(y_true, y)
         nonzero = fpr != 0
         eff, rej = tpr[nonzero], 1.0 / fpr[nonzero]
 
@@ -203,17 +207,65 @@ class Plots():
         return eff, ratio
 
     def plot_rej_vs_eff(self):
-        #eff, rej = self.roc(self.real_y, self.pred_y, sample_weight=self.weights)
-        eff, rej = self.roc(self.real_y, self.pred_y)
+        eff, rej = self.roc(self.real_y, self.pred_y, sample_weight=self.weights)
+        #eff, rej = self.roc(self.real_y, self.pred_y)
+        self.eff = eff
+        self.rej = rej
         fig, ax = plt.subplots()
         ax.plot(eff, rej, color='g', label='Delphes Tau RNN')
         #ax.set_ylim(self.ylim)
         ax.set_xlim((0., 1.))
+        ax.set_ylim((1., 1e4))
         ax.set_yscale("log")
         ax.set_xlabel("Signal efficiency", x=1, ha="right")
         ax.set_ylabel("Background rejection", y=1, ha="right")
         if self.legend:
             ax.legend()
         return fig
+
+    #Copied from Original RNN Project
+    def plot_flatefficiency(self):
+        # Flatten on training sample
+        sig_train = sh.sig_train.get_variables("TauJets/pt", "TauJets/mu",
+                                               self.pred_y)
+        flat = Flattener(pt_bins, mu_bins, self.eff)
+        flat.fit(sig_train["TauJets/pt"], sig_train["TauJets/mu"],
+                 sig_train[self.score])
+
+        # Efficiency on testing sample
+        sig_test = sh.sig_test.get_variables("TauJets/pt", "TauJets/mu",
+                                             self.score)
+        pass_thr = flat.passes_thr(sig_test["TauJets/pt"],
+                                   sig_test["TauJets/mu"],
+                                   sig_test[self.score])
+
+        statistic, _, _, _ = binned_statistic_2d(
+            sig_test["TauJets/pt"], sig_test["TauJets/mu"], pass_thr,
+            statistic=lambda arr: np.count_nonzero(arr) / float(len(arr)),
+            bins=[flat.x_bins, flat.y_bins])
+
+        # Plot
+        fig, ax = plt.subplots()
+
+        xx, yy = np.meshgrid(flat.x_bins, flat.y_bins - 0.5)
+        cm = ax.pcolormesh(xx / 1000.0, yy, statistic.T)
+
+        ax.set_xscale("log")
+        ax.set_xlim(20, 2000)
+        ax.set_xlabel(r"Reco. tau $p_\mathrm{T}$ / GeV",
+                      ha="right", x=1)
+        ax.set_ylim(0, 60)
+        ax.set_ylabel(r"$\mu$", ha="right", y=1)
+
+        cb = fig.colorbar(cm)
+        cb.set_label("Signal efficiency", ha="right", y=1)
+
+        label = r"$\epsilon_\mathrm{sig}$ = " + "{:.0f} %".format(
+            100 * self.eff)
+        ax.text(0.93, 0.85, label, ha="right", va="bottom", fontsize=7,
+                transform=ax.transAxes)
+
+        return fig
+
 
 

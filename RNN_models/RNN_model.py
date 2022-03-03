@@ -58,7 +58,7 @@ class Tau_Model():
         -0.5, 10.5, 19.5, 23.5, 27.5, 31.5, 35.5, 39.5, 49.5, 61.5
     ])
 
-    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights):
+    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights, cross_sections):
         self.prong = Prongs
         self.output = TFile.Open("Prong-{}_RNN_Model.root".format(str(Prongs)), "RECREATE")
         self.track_data = inputs[0]
@@ -68,6 +68,7 @@ class Tau_Model():
         self.sig_pt = sig_pt
         self.bck_pt = bck_pt
         self.w = weights
+        self.cross_sections = cross_sections
         self.jet_pt = jet_pt
         start_sig_index = -len(self.sig_pt)
         end_bck_index = len(self.bck_pt)
@@ -83,20 +84,52 @@ class Tau_Model():
         self.jet_data = self.jet_data[shuffled_indices]
         self.y_data = self.y_data[shuffled_indices]
         self.w = self.w[shuffled_indices]
+        self.cross_sections = self.cross_sections[shuffled_indices]
         self.index_of_sig_bck = self.index_of_sig_bck[shuffled_indices]
-        self.jet_pt = np.append(self.bck_pt, self.sig_pt)[shuffled_indices]
+        self.jet_pt = self.jet_pt[shuffled_indices]
+        #self.jet_pt = np.append(self.bck_pt, self.sig_pt)[shuffled_indices]
         self.inputs = [self.track_data[int(len(self.jet_data)/2+1):-1], self.tower_data[int(len(self.jet_data)/2+1):-1],
                        self.jet_data[int(len(self.jet_data)/2+1):-1]]
         self.y = self.y_data[int(len(self.jet_data)/2+1):-1]
-        self.w_train = self.w[int(len(self.jet_data)/2+1):-1]
+        self.training_cross_sections = self.cross_sections[int(len(self.jet_data)/2+1):-1]
         self.train_sigbck_index = self.index_of_sig_bck[int(len(self.jet_data)/2+1):-1]
         self.train_jet_pt = self.jet_pt[int(len(self.jet_data)/2+1):-1]
+        #self.w_train = self.w[int(len(self.jet_data)/2+1):-1]
+
+        train_sig_weight, train_bck_weight = self.pt_reweight(self.train_jet_pt[self.train_sigbck_index == "s"], self.train_jet_pt[self.train_sigbck_index == "b"],
+                                        self.training_cross_sections[self.train_sigbck_index == "s"], self.training_cross_sections[self.train_sigbck_index == "b"])
+
+        self.w_train = [0.] * len(self.train_sigbck_index)
+        s_idx = 0
+        b_idx = 0
+        for idx in range(0, len(self.train_sigbck_index)):
+            if self.train_sigbck_index[idx] == "s":
+                self.w_train[idx] = train_sig_weight[s_idx]
+                s_idx += 1
+            elif self.train_sigbck_index[idx] == "b":
+                self.w_train[idx] = train_bck_weight[b_idx]
+                b_idx += 1
+        self.w_train = np.asarray(self.w_train * self.training_cross_sections).astype(np.float32)
         self.eval_inputs = [self.track_data[0:int(len(self.jet_data)/2+1)], self.tower_data[0:int(len(self.jet_data)/2+1)],
                             self.jet_data[0:int(len(self.jet_data)/2+1)]]
         self.eval_y = self.y_data[0:int(len(self.jet_data)/2+1)]
-        self.eval_w = self.w[0:int(len(self.jet_data)/2+1)]
+        self.eval_cross_sections = self.cross_sections[0:int(len(self.jet_data)/2+1)]
         self.eval_sigbck_index = self.index_of_sig_bck[0:int(len(self.jet_data)/2+1)]
         self.eval_jet_pt = self.jet_pt[0:int(len(self.jet_data)/2+1)]
+        # self.eval_w = self.w[0:int(len(self.jet_data)/2+1)]
+        eval_sig_weight, eval_bck_weight = self.pt_reweight(self.eval_jet_pt[self.eval_sigbck_index == "s"], self.eval_jet_pt[self.eval_sigbck_index == "b"],
+                                       self.eval_cross_sections[self.eval_sigbck_index == "s"], self.eval_cross_sections[self.eval_sigbck_index == "b"])
+        self.eval_w = [0.] * len(self.eval_sigbck_index)
+        s_idx = 0
+        b_idx = 0
+        for idx in range(0, len(self.eval_sigbck_index)):
+            if self.eval_sigbck_index[idx] == "s":
+                self.eval_w[idx] = eval_sig_weight[s_idx]
+                s_idx += 1
+            elif self.eval_sigbck_index[idx] == "b":
+                self.eval_w[idx] = eval_bck_weight[b_idx]
+                b_idx += 1
+        self.eval_w = np.asarray(self.eval_w * self.eval_cross_sections).astype(np.float32)
         t = []
         for p in tqdm(self.eval_sigbck_index):
             if p == "b":
@@ -241,7 +274,7 @@ class Tau_Model():
         # Setup Callbacks
         callbacks = []
 
-        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=35, verbose=1)
+        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1)
         callbacks.append(early_stopping)
 
         model_checkpoint = ModelCheckpoint(
@@ -268,9 +301,9 @@ class Tau_Model():
         results = model.evaluate(inputs, outputs, sample_weight=weights, batch_size=batch_size)
         print("test loss, test acc:", results)
         if results[3]+results[4] > 0.:
-            print("TrueTau/FakeTau", results[3]/(results[3]+results[4]))
+            print("TrueTau/FakeTau", results[3]/(results[4]+results[5]))
         print("Taus Not IDed : ", results[5])
-        print("Total Taus: ",results[3]+results[4]+results[5])
+        print("Total Taus: ",results[3]+results[5])
 
     def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
         # Binning
