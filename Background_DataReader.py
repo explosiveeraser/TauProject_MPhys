@@ -72,12 +72,30 @@ class Background(Dataset):
         self.num_of_object["Tower"] = 0
         self.JetArray = []
         print("Reading in physics objects.")
+        dataset_i = -1
         for entry in trange(self._nev, desc="Background Jet (wTrack) Event Loop."):
             self._reader.ReadEntry(entry)
             #weight = self._branchReader["Weight"].At(0).Weight
             evt = self._branchReader["Event"].At(0)
             #weight = event cross section
             weight = evt.CrossSection
+            evt_num = evt.Number
+            if evt_num % 10 == 0:
+                print(evt_num)
+            # Scale cross sections to mean around 1. Scaling to be done seperately for different trees
+            if evt_num == 0:
+                dataset_i += 1
+            if dataset_i == 0:
+                weight /= 1.073e6
+            elif dataset_i == 1:
+                weight /= 2.032e5
+            elif dataset_i == 2:
+                weight /= 1.886e4
+            elif dataset_i == 3:
+                weight /= 1827
+            elif dataset_i == 4:
+                weight /= 231.1
+
             num_Jets = self._branchReader["Jet"].GetEntries()
             self.Tau_Tagger.append([])
             tracks = []

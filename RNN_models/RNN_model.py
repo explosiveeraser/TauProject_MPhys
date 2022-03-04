@@ -97,7 +97,7 @@ class Tau_Model():
         #self.w_train = self.w[int(len(self.jet_data)/2+1):-1]
 
         train_sig_weight, train_bck_weight = self.pt_reweight(self.train_jet_pt[self.train_sigbck_index == "s"], self.train_jet_pt[self.train_sigbck_index == "b"],
-                                        np.ones_like(self.training_cross_sections[self.train_sigbck_index == "s"]), np.ones_like(self.training_cross_sections[self.train_sigbck_index == "b"]))
+                                        self.training_cross_sections[self.train_sigbck_index == "s"], self.training_cross_sections[self.train_sigbck_index == "b"])
 
         self.w_train = [0.] * len(self.train_sigbck_index)
         s_idx = 0
@@ -118,7 +118,7 @@ class Tau_Model():
         self.eval_jet_pt = self.jet_pt[0:int(len(self.jet_data)/2+1)]
         # self.eval_w = self.w[0:int(len(self.jet_data)/2+1)]
         eval_sig_weight, eval_bck_weight = self.pt_reweight(self.eval_jet_pt[self.eval_sigbck_index == "s"], self.eval_jet_pt[self.eval_sigbck_index == "b"],
-                                       np.ones_like(self.eval_cross_sections[self.eval_sigbck_index == "s"]), np.ones_like(self.eval_cross_sections[self.eval_sigbck_index == "b"]))
+                                       self.eval_cross_sections[self.eval_sigbck_index == "s"], self.eval_cross_sections[self.eval_sigbck_index == "b"])
         self.eval_w = [0.] * len(self.eval_sigbck_index)
         s_idx = 0
         b_idx = 0
@@ -267,21 +267,21 @@ class Tau_Model():
         self.RNNmodel.summary()
         plot_model(self.RNNmodel, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
         #SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
-        self.RNNmodel.compile(optimizer=SGD(learning_rate=0.01, momentum=0.9, nesterov=True), loss="binary_crossentropy",
+        self.RNNmodel.compile(optimizer=Adam(learning_rate=0.01), loss="binary_crossentropy",
                          metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives', "FalseNegatives", "TrueNegatives"])
 
     def Model_Fit(self, batch_size, epochs, validation_split, model="RNNmodel", inputs="RNNmodel"):
         # Setup Callbacks
         callbacks = []
 
-        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1)
+        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=35, verbose=1)
         callbacks.append(early_stopping)
 
         model_checkpoint = ModelCheckpoint(
             "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
         callbacks.append(model_checkpoint)
 
-        reduce_lr = ReduceLROnPlateau(patience=9, verbose=1, min_lr=1e-4)
+        reduce_lr = ReduceLROnPlateau(patience=10, verbose=1, min_lr=1e-4)
         callbacks.append(reduce_lr)
         # End of setup callbacks
         if type(model) == str:

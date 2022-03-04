@@ -22,10 +22,11 @@ class DataProcessing():
         #PileUp Processed
         self.signal_wPU = Signal(Sig_wPU, print_hist=False)
         self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
-
+        del self.signal_wPU
         #None PileUp Processed
-        self.signal = Signal(SigDir, print_hist=False)
         self.background = Background(BackDir, print_hist=False)
+        self.signal = Signal(SigDir, print_hist=False)
+
         self.signal.write_taucan_ttree("signal_tree")
         self.background.write_taucan_ttree("background_tree")
         print("Num jets in signal are: " + str(len(self.signal.JetArray)))

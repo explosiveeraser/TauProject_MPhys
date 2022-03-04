@@ -110,7 +110,7 @@ def plot_graph(name, x_data, y_data, n_points):
     canvas.Update()
     canvas.Print("{}.pdf".format(name))
 
-DataP1 = RNN_Data(1, False, "prong1_data", print_hists=False, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
+DataP1 = RNN_Data(1, True, "prong1_data", print_hists=True, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 

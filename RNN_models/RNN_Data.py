@@ -607,8 +607,8 @@ class RNN_Data():
         jet_untrans = {}
         track_untrans = {}
         tower_untrans = {}
-        b_cs = tree2array(backtree, branches=["jet_cross_section"]).astype(np.float32) / 50000
-        s_cs = tree2array(sigtree, branches=["jet_cross_section"]).astype(np.float32) / 0.00321
+        b_cs = tree2array(backtree, branches=["jet_cross_section"]).astype(np.float32)
+        s_cs = tree2array(sigtree, branches=["jet_cross_section"]).astype(np.float32)
         #s_cs = np.ones_like(s_cs)
         #b_cs = np.ones_like(b_cs)
         cross_section = np.append(b_cs, s_cs).astype(np.float32)
@@ -632,8 +632,8 @@ class RNN_Data():
                         if jet_var in ["jet_PT"]:
                             self.sig_pt = sigjet
                             self.bck_pt = backjet
-                            s_cs = np.ones_like(s_cs)
-                            b_cs = np.ones_like(b_cs)
+                            s_cs = s_cs
+                            b_cs = b_cs
                             sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs)
                             self.pt_weights = np.append(bck_pt_w, sig_pt_w, axis=0)
                             self.new_weights = cross_section * self.pt_weights

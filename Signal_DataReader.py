@@ -78,6 +78,13 @@ class Signal(Dataset):
             evt = self._branchReader["Event"].At(0)
             #weight = event cross section
             weight = evt.CrossSection
+
+            #Scale cross sections to mean around 1
+            if weight > 0 and not pile_up:
+                weight /= 0.00321
+            elif weight > 0 and pile_up:
+                weight /= 0.00319
+
             num_Jets = self._branchReader["Jet"].GetEntries()
             self.Tau_Tagger.append([])
             tracks = []
