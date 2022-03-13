@@ -42,5 +42,5 @@ class Tower_():
         self.deltaR = math.sqrt((self.deltaEta)**2+(self.deltaPhi)**2)
         if self.deltaR < 0.2:
             self.CoreRegion = True
-        elif self.deltaR > 0.2 and self.deltaR <= 0.6:
+        elif self.deltaR > 0.2 and self.deltaR <= 0.4:
             self.IsoRegion = True

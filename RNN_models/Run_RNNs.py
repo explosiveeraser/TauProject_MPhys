@@ -35,7 +35,7 @@ import ROOT
 import numpy as np
 import tqdm
 
-from ATLAS_RNN_Plots import ScorePlot, FlattenerCutmapPlot, FlattenerEfficiencyPlot, EfficiencyPlot, RejectionPlot
+
 
 from RNN_model import Tau_Model
 from RNN_Data import RNN_Data
@@ -110,7 +110,19 @@ def plot_graph(name, x_data, y_data, n_points):
     canvas.Update()
     canvas.Print("{}.pdf".format(name))
 
-DataP1 = RNN_Data(1, True, "prong1_data", print_hists=True, BacktreeFile="background_tree_1-Prong", BackTreeName="background_tree", SignaltreeFile="signal_tree_1-Prong", SignalTreeName="signal_tree", BackendPartOfTree="", SignalendPartOfTree="")
+pile_up = True
+
+if pile_up:
+    from Mu_ATLAS_Plots import ScorePlot, FlattenerCutmapPlot, FlattenerEfficiencyPlot, EfficiencyPlot, RejectionPlot
+
+else:
+    from ATLAS_RNN_Plots import ScorePlot, FlattenerCutmapPlot, FlattenerEfficiencyPlot, EfficiencyPlot, RejectionPlot
+
+
+DataP1 = RNN_Data(1, True, "prong1_data", print_hists=True,
+                  BacktreeFile=["0_background_wPU_tree_1-Prong", "1_background_wPU_tree_1-Prong", "2_background_wPU_tree_1-Prong", "3_background_wPU_tree_1-Prong", "4_background_wPU_tree_1-Prong"]
+                , BackTreeName=["0_background_wPU_tree", "1_background_wPU_tree", "2_background_wPU_tree", "3_background_wPU_tree", "4_background_wPU_tree"]
+                  , SignaltreeFile=["signal_wPU_tree_1-Prong"], SignalTreeName=["signal_wPU_tree"], BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 
@@ -122,7 +134,7 @@ do_RNN = True
 
 
 if do_RNN:
-    Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:6,:], DataP1.input_tower[:,0:10,:], DataP1.input_jet[:, 1:12]], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain, DataP1.new_weights, DataP1.cross_section)
+    Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:6,:], DataP1.input_tower[:,0:10,:], DataP1.input_jet[:, 1:12]], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain, DataP1.new_weights, DataP1.cross_section, DataP1.mu)
     plot_2_histogram("Train_weights-Eval_weights", Prong1Model.w_train, Prong1Model.eval_w, np.ones_like(Prong1Model.w_train), np.ones_like(Prong1Model.eval_w), 70)
 
     training_sig_pt = Prong1Model.train_jet_pt[Prong1Model.train_sigbck_index == "s"]
@@ -140,8 +152,13 @@ if do_RNN:
 
     sig_pt = DataP1.sig_pt
     bck_pt = DataP1.bck_pt
-    s_w = DataP1.new_weights[-DataP1.length_sig:-1]
-    b_w = DataP1.new_weights[0:DataP1.length_bck]
+
+    # s_w = DataP1.new_weights[-DataP1.length_sig:-1]
+    # b_w = DataP1.new_weights[0:DataP1.length_bck]
+
+    s_w = DataP1.cross_section[-DataP1.length_sig:-1]
+    b_w = DataP1.cross_section[0:DataP1.length_bck]
+
     plot_2_histogram("dataproc_jet_pt", sig_pt, bck_pt, s_w, b_w, 50, hist_min=20., hist_max=3300.0)
 
 
@@ -226,6 +243,8 @@ if do_RNN:
 
     sig_train_pt = Prong1Model.train_jet_pt[Prong1Model.train_sigbck_index == "s"]
     sig_train_weight = Prong1Model.w_train[Prong1Model.train_sigbck_index == "s"]
+    if pile_up:
+        sig_train_mu = Prong1Model.mu_train[Prong1Model.train_sigbck_index == "s"]
 
     sig_train_score = Prong1Model.RNNmodel.predict([Prong1Model.inputs[0][Prong1Model.train_sigbck_index == "s"], Prong1Model.inputs[1][Prong1Model.train_sigbck_index == "s"], Prong1Model.inputs[2][Prong1Model.train_sigbck_index == "s"]])
     sig_train_score.flatten()
@@ -233,18 +252,24 @@ if do_RNN:
     bkg_train_score = Prong1Model.RNNmodel.predict([Prong1Model.inputs[0][Prong1Model.train_sigbck_index == "b"], Prong1Model.inputs[1][Prong1Model.train_sigbck_index == "b"], Prong1Model.inputs[2][Prong1Model.train_sigbck_index == "b"]])
     bkg_train_score.flatten()
     bkg_train_weight = Prong1Model.w_train[Prong1Model.train_sigbck_index == "b"].flatten()
+    if pile_up:
+        bkg_train_mu = Prong1Model.mu_train[Prong1Model.train_sigbck_index == "b"]
 
     sig_test_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "s"]
     sig_test_weight = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "s"]
 
     sig_test_score = pred_y[Prong1Model.eval_sigbck_index == "s"]
     sig_test_score.flatten()
+    if pile_up:
+        sig_test_mu = Prong1Model.eval_mu[Prong1Model.eval_sigbck_index == "s"]
 
     bkg_test_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "b"]
     bkg_test_weight = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "b"]
 
     bkg_test_score = pred_y[Prong1Model.eval_sigbck_index == "b"]
     bkg_test_score.flatten()
+    if pile_up:
+        bkg_test_mu = Prong1Model.eval_mu[Prong1Model.eval_sigbck_index == "b"]
 
     #ATLAS Score Plot
     rnn_score = ScorePlot(test=True, log_y=True)
@@ -254,23 +279,43 @@ if do_RNN:
     input("Enter..")
 
     #Test ATLAS plotting algorithm
-    FEP_tight = FlattenerEfficiencyPlot(sig_train_pt, sig_train_score, sig_test_pt, sig_test_score, 60/100)
-    FEP_fig = FEP_tight.plot()
-    plt.show()
-    EPs = []
-    RPs = []
-    plots = []
-    plots_idx = 0
-    for idx in tqdm.trange(0, len(Prong1Model.inputs[2][0,1:12])):
-        sig_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "s", idx]
-        bkg_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "b", idx]
-        EPs.append(EfficiencyPlot(60/100))
-        plots.append(EPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_test_pt, sig_test_score, "xvar_{}".format(idx),
-                                         sig_test_xvar))
-        RPs.append(RejectionPlot(60/100))
-        plots.append(RPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_test_pt, sig_test_weight, bkg_test_pt,
-                                         bkg_test_weight, bkg_test_score, bkg_test_xvar, "xvar_{}".format(idx)))
-    plt.show()
+    if pile_up:
+        FEP_tight = FlattenerEfficiencyPlot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, 60 / 100)
+        FEP_fig = FEP_tight.plot()
+        plt.show()
+        EPs = []
+        RPs = []
+        plots = []
+        plots_idx = 0
+        for idx in tqdm.trange(0, len(Prong1Model.inputs[2][0, 1:12])):
+            sig_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "s", idx]
+            bkg_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "b", idx]
+            EPs.append(EfficiencyPlot(60 / 100))
+            plots.append(
+                EPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "xvar_{}".format(idx),
+                                    sig_test_xvar))
+            RPs.append(RejectionPlot(60 / 100))
+            plots.append(RPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight, bkg_test_pt,
+                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "xvar_{}".format(idx)))
+        plt.show()
+    else:
+        FEP_tight = FlattenerEfficiencyPlot(sig_train_pt, sig_train_score, sig_test_pt, sig_test_score, 60/100)
+        FEP_fig = FEP_tight.plot()
+        plt.show()
+        EPs = []
+        RPs = []
+        plots = []
+        plots_idx = 0
+        for idx in tqdm.trange(0, len(Prong1Model.inputs[2][0,1:12])):
+            sig_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "s", idx]
+            bkg_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "b", idx]
+            EPs.append(EfficiencyPlot(60/100))
+            plots.append(EPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_test_pt, sig_test_score, "xvar_{}".format(idx),
+                                             sig_test_xvar))
+            RPs.append(RejectionPlot(60/100))
+            plots.append(RPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_test_pt, sig_test_weight, bkg_test_pt,
+                                             bkg_test_weight, bkg_test_score, bkg_test_xvar, "xvar_{}".format(idx)))
+        plt.show()
 
 
 

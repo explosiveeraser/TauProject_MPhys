@@ -30,7 +30,7 @@ except:
 
 class Signal(Dataset):
 
-    def __init__(self, directory, conf_fname="Hist_Config", print_hist=True, pile_up=False):
+    def __init__(self, directory, conf_fname="Hist_Config", print_hist=True, pile_up=False, weight_norm=1):
         if "/" in directory:
             self.name = directory[:-1]
         else:
@@ -46,8 +46,7 @@ class Signal(Dataset):
                                      "Tower"]
         elif pile_up:
             self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT",
-                                     "Track",
-                                     "Tower", "PileUpMix"]
+                                     "Track", "Tower", "PileUpMix", "Vertex"]
         self._reader = ROOT.ExRootTreeReader(self.chain)
         self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
         for branch in self._branches:
@@ -66,7 +65,7 @@ class Signal(Dataset):
                 self._branchReader[branch] = self._reader.UseBranch(branch)
                 self.num_of_object[branch] = 0
         elif pile_up:
-            for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower", "PileUpMix"}:
+            for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track", "Tower", "PileUpMix", "Vertex"}:
                 self._branchReader[branch] = self._reader.UseBranch(branch)
                 self.num_of_object[branch] = 0
         self.num_of_object["Tower"] = 0
@@ -78,7 +77,7 @@ class Signal(Dataset):
             evt = self._branchReader["Event"].At(0)
             #weight = event cross section
             weight = evt.CrossSection
-
+            mu = self
             #Scale cross sections to mean around 1
             if weight > 0 and not pile_up:
                 weight /= 0.00321
@@ -86,12 +85,17 @@ class Signal(Dataset):
                 weight /= 0.00319
 
             num_Jets = self._branchReader["Jet"].GetEntries()
+
             self.Tau_Tagger.append([])
             tracks = []
             towers = []
             particles = []
             if pile_up:
+                self._branchReader["Vertex"].GetEntries()
+                event_mu = len(self._branchReader["Vertex"])
                 pileup_particles = []
+            else:
+                event_mu = 1
             num_tracks = self._branchReader["Track"].GetEntries()
             num_towers = self._branchReader["Tower"].GetEntries()
             num_particles = self._branchReader["Particle"].GetEntries()
@@ -118,7 +122,7 @@ class Signal(Dataset):
                 jet = self._branchReader["Jet"].At(idx)
                 self.num_of_object["Jet"] += 1
                 # new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents)
-                new_jet = Jet_(entry, idx, evt, weight, jet, None, particles, tracks, towers, None, hists=print_hist)
+                new_jet = Jet_(entry, idx, evt, weight, event_mu, jet, None, particles, tracks, towers, None, hists=print_hist)
                 self.JetArray.append(new_jet)
                 if print_hist:
                     self.Fill_Histograms("Jet", jet, weight, new_jet)
@@ -169,6 +173,7 @@ class Signal(Dataset):
             jet_trans_impact_param_sig = array('f', [0.])
             jet_TruthTau = array('i', [0])
             jet_delphesTauTag = array('i', [0])
+            mu = array('f', [0.])
             nTrack = array('i', [0])
             nTower = array('i', [0])
             track_entry = array('i', MaxNtrack * [0])
@@ -204,6 +209,7 @@ class Signal(Dataset):
             tree.Branch("jet_mass_track_EM_system", jet_mass_track_EM_system, "jet_mass_track_EM_system/F")
             tree.Branch("jet_mass_track_system", jet_mass_track_system, "jet_mass_track_system/F")
             tree.Branch("jet_trans_impact_param_sig", jet_trans_impact_param_sig, 'jet_trans_impact_param_sig/F')
+            tree.Branch("mu", mu, "mu/F")
             tree.Branch("nTrack", nTrack, "nTrack/I")
             tree.Branch("nTower", nTower, "nTower/I")
             tree.Branch("track_entry", track_entry, "track_entry[nTrack]/I")
@@ -251,6 +257,7 @@ class Signal(Dataset):
                     jet_trans_impact_param_sig[0] = jet.max_trans_impact_param
                     jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     jet_delphesTauTag[0] = jet.delphes_TauTag.__int__()
+                    mu[0] = jet.mu
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
                     nTrack[0] = n_tr

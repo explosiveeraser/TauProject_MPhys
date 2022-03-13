@@ -55,10 +55,10 @@ class Tau_Model():
     ])
 
     mu_bins = np.array([
-        -0.5, 10.5, 19.5, 23.5, 27.5, 31.5, 35.5, 39.5, 49.5, 61.5
-    ])
+        0, 10, 12, 14, 16, 18, 20, 22, 24, 50
+    ]) * 2
 
-    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights, cross_sections):
+    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights, cross_sections, mu):
         self.prong = Prongs
         self.output = TFile.Open("Prong-{}_RNN_Model.root".format(str(Prongs)), "RECREATE")
         self.track_data = inputs[0]
@@ -69,6 +69,7 @@ class Tau_Model():
         self.bck_pt = bck_pt
         self.w = weights
         self.cross_sections = cross_sections
+        self.mu = mu
         self.jet_pt = jet_pt
         start_sig_index = -len(self.sig_pt)
         end_bck_index = len(self.bck_pt)
@@ -85,6 +86,7 @@ class Tau_Model():
         self.y_data = self.y_data[shuffled_indices]
         self.w = self.w[shuffled_indices]
         self.cross_sections = self.cross_sections[shuffled_indices]
+        self.mu = self.mu[shuffled_indices]
         self.index_of_sig_bck = self.index_of_sig_bck[shuffled_indices]
         self.jet_pt = self.jet_pt[shuffled_indices]
         #self.jet_pt = np.append(self.bck_pt, self.sig_pt)[shuffled_indices]
@@ -99,6 +101,7 @@ class Tau_Model():
         train_sig_weight, train_bck_weight = self.pt_reweight(self.train_jet_pt[self.train_sigbck_index == "s"], self.train_jet_pt[self.train_sigbck_index == "b"],
                                         self.training_cross_sections[self.train_sigbck_index == "s"], self.training_cross_sections[self.train_sigbck_index == "b"])
 
+        self.mu_train = self.mu[int(len(self.jet_data)/2+1):-1]
         self.w_train = [0.] * len(self.train_sigbck_index)
         s_idx = 0
         b_idx = 0
@@ -119,6 +122,7 @@ class Tau_Model():
         # self.eval_w = self.w[0:int(len(self.jet_data)/2+1)]
         eval_sig_weight, eval_bck_weight = self.pt_reweight(self.eval_jet_pt[self.eval_sigbck_index == "s"], self.eval_jet_pt[self.eval_sigbck_index == "b"],
                                        self.eval_cross_sections[self.eval_sigbck_index == "s"], self.eval_cross_sections[self.eval_sigbck_index == "b"])
+        self.eval_mu = self.mu[0:int(len(self.jet_data)/2+1)]
         self.eval_w = [0.] * len(self.eval_sigbck_index)
         s_idx = 0
         b_idx = 0

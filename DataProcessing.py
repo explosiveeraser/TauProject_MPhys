@@ -18,19 +18,75 @@ delphes install library directory
 #Convention Signal First and Background Second
 class DataProcessing():
 
-    def __init__(self, SigDir, BackDir, Sig_wPU, print_hists=True):
-        #PileUp Processed
-        self.signal_wPU = Signal(Sig_wPU, print_hist=False)
-        self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
-        del self.signal_wPU
-        #None PileUp Processed
-        self.background = Background(BackDir, print_hist=False)
-        self.signal = Signal(SigDir, print_hist=False)
+    def __init__(self, SigDir, BackDir, Sig_wPU, back_wPU, print_hists=True):
 
-        self.signal.write_taucan_ttree("signal_tree")
-        self.background.write_taucan_ttree("background_tree")
-        print("Num jets in signal are: " + str(len(self.signal.JetArray)))
-        print("Num jets in background are: " + str(len(self.background.JetArray)))
+        #PileUp Processed
+        if isinstance(back_wPU, list):
+            i = 0
+            for tree in back_wPU:
+                print(i)
+                if i == 0:
+                    background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=1.076e6)
+                elif i == 1:
+                    background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=2.012e5)
+                elif i == 2:
+                    background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=1.893e4)
+                elif i == 3:
+                    background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=1805)
+                elif i == 4:
+                    background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=230)
+                background_wPU.write_taucan_ttree("{}_background_wPU_tree".format(i))
+                Prong1 = 0
+                Prong3 = 0
+                ProngN = 0
+                for jet in background_wPU.JetArray:
+                    if jet.TruthTau["1-Prong"] == True:
+                        Prong1 += 1
+                    elif jet.TruthTau["3-Prong"] == True:
+                        Prong3 += 1
+                    elif jet.TruthTau["N>3-Prong"] == True:
+                        ProngN += 1
+                print("The number of true 1-Prong tau jets in {} is: {}".format("{}_background_wPU_tree".format(i), Prong1))
+                print("The number of true 3-Prong tau jets in {} is: {}".format("{}_background_wPU_tree".format(i),
+                                                                                Prong3))
+                print("The number of true more than 3-Prong tau jets in {} is: {}".format("{}_background_wPU_tree".format(i),
+                                                                                ProngN))
+                del background_wPU
+                i += 1
+        else:
+            background_wPU = Background(back_wPU, print_hist=False)
+            background_wPU.write_taucan_ttree("background_wPU_tree")
+            del background_wPU
+
+
+        self.signal_wPU = Signal(Sig_wPU, print_hist=False, pile_up=True)
+        self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
+
+        Prong1 = 0
+        Prong3 = 0
+        ProngN = 0
+        for jet in self.signal_wPU.JetArray:
+            if jet.TruthTau["1-Prong"] == True:
+                Prong1 += 1
+            elif jet.TruthTau["3-Prong"] == True:
+                Prong3 += 1
+            elif jet.TruthTau["N>3-Prong"] == True:
+                ProngN += 1
+        print("The number of true 1-Prong tau jets in {} is: {}".format("signal_wPU_tree", Prong1))
+        print("The number of true 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
+                                                                        Prong3))
+        print("The number of true more than 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
+                                                                                  ProngN))
+        del self.signal_wPU
+
+        #None PileUp Processed
+        # self.background = Background(BackDir, print_hist=False)
+        # self.signal = Signal(SigDir, print_hist=False)
+        #
+        # self.signal.write_taucan_ttree("signal_tree")
+        # self.background.write_taucan_ttree("background_tree")
+        # print("Num jets in signal are: " + str(len(self.signal.JetArray)))
+        # print("Num jets in background are: " + str(len(self.background.JetArray)))
         self.canvases = {}
         self.legend = {}
         self.Hist_started = False

@@ -17,7 +17,7 @@ from Tower import Tower_
 
 class Jet_():
 
-    def __init__(self, entry, idx, event, cross_section, jet_obj, particles, Event_Particles, Event_Tracks, Event_Towers, constituents, hists=True):
+    def __init__(self, entry, idx, event, cross_section, mu, jet_obj, particles, Event_Particles, Event_Tracks, Event_Towers, constituents, hists=True):
         self.entry = entry
         self.idx = idx
         self.event = event
@@ -33,6 +33,7 @@ class Jet_():
         self.deltaEta = jet_obj.DeltaEta
         self.deltaPhi = jet_obj.DeltaPhi
         self.charge = jet_obj.Charge
+        self.mu = mu
         self.NCharged = jet_obj.NCharged
         self.NNeutral = jet_obj.NNeutrals
         self.DR = math.sqrt((jet_obj.DeltaEta) **2 + (jet_obj.DeltaPhi) **2)
@@ -40,7 +41,7 @@ class Jet_():
         self.num_particles = 0
         self.num_tracks = 0
         self.num_towers = 0
-        if self.PT > 20.0 and abs(self.Eta) < 2.5:
+        if self.PT > 0.0 and abs(self.Eta) < 50:
             self.TauCan_1Prong = True
             self.TauCan_3Prong = True
         else:
@@ -88,7 +89,7 @@ class Jet_():
         deltaEta = self.Eta - con_eta
         deltaPhi = self.Phi - con_phi
         deltaR = math.sqrt((deltaEta)**2+(deltaPhi)**2)
-        if deltaR <= 0.6:
+        if deltaR <= 0.4:
             return True
         else:
             return False

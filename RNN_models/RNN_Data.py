@@ -51,8 +51,8 @@ class RNN_Data():
     ])
 
     mu_bins = np.array([
-        -0.5, 10.5, 19.5, 23.5, 27.5, 31.5, 35.5, 39.5, 49.5, 61.5
-    ])
+    0, 10, 12, 14, 16, 18, 20, 22, 24, 50
+    ]) * 2
 
     jet_keys = {"jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                 "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
@@ -70,13 +70,40 @@ class RNN_Data():
         self.hists_after_trans = {}
         if not load_pickled_data:
             self.preprocessing = {}
-            back_tree_file = TFile.Open("../NewTTrees/{}.root".format(BacktreeFile))
-            sig_tree_file = TFile.Open("../NewTTrees/{}.root".format(SignaltreeFile))
 
-            self.BackgroundTree = back_tree_file.Get("{}{}".format(BackTreeName, BackendPartOfTree))
-            self.SignalTree = sig_tree_file.Get("{}{}".format(SignalTreeName, SignalendPartOfTree))
-            SignalNumEntries = self.SignalTree.GetEntries()
-            BackgroundNumEntries = self.BackgroundTree.GetEntries()
+            # if isinstance(BacktreeFile, list):
+            #     BacktreeFile = [BacktreeFile]
+            # if isinstance(BackTreeName, list):
+            #     BackTreeName = [BackTreeName]
+            # if isinstance(SignaltreeFile, list):
+            #     SignaltreeFile = [SignaltreeFile]
+            # if isinstance(SignalTreeName, list):
+            #     SignalTreeName = [SignalTreeName]
+
+            back_tree_file = []
+            sig_tree_file = []
+            for back_file in BacktreeFile:
+                back_tree_file.append(TFile.Open("../NewTTrees/{}.root".format(back_file)))
+            for sig_file in SignaltreeFile:
+                sig_tree_file.append(TFile.Open("../NewTTrees/{}.root".format(sig_file)))
+
+            self.BackgroundTree = []
+            self.SignalTree = []
+
+            SignalNumEntries = []
+            BackgroundNumEntries = []
+
+            for idx in range(0, len(BackTreeName)):
+                back_tree = BackTreeName[idx]
+                back_file = back_tree_file[idx]
+                self.BackgroundTree.append(back_file.Get("{}{}".format(back_tree, BackendPartOfTree)))
+                BackgroundNumEntries.append(self.BackgroundTree[idx].GetEntries())
+            for idx in range(0, len(SignalTreeName)):
+                sig_tree = SignalTreeName[idx]
+                sig_file = sig_tree_file[idx]
+                self.SignalTree.append(sig_file.Get("{}{}".format(sig_tree, SignalendPartOfTree)))
+                SignalNumEntries.append(self.SignalTree[idx].GetEntries())
+
             # call function above for sig and back data
             #sig_jet, sig_tr, sig_to, sig_label = self.read_tree(self.SignalTree)
             #back_jet, back_tr, back_to, back_label = self.read_tree(self.BackgroundTree)
@@ -88,7 +115,7 @@ class RNN_Data():
             self.Ytrain = label
             self.cross_section = cross_section
             file = open(pickle_file, "wb")
-            pickle.dump([self.input_track, self.input_tower, self.input_jet, self.Ytrain, [self.sig_pt, self.bck_pt], self.cross_section, self.pt_weights, self.new_weights], file)
+            pickle.dump([self.input_track, self.input_tower, self.input_jet, self.Ytrain, [self.sig_pt, self.bck_pt], self.cross_section, self.pt_weights, self.new_weights, self.mu], file)
             file.close()
 
             file = open(pickle_file, "rb")
@@ -142,6 +169,7 @@ class RNN_Data():
             self.cross_section = data[5]
             self.pt_weights = data[6]
             self.new_weights = data[7]
+            self.mu = data[8]
             seed = np.random.randint(1, 9999)
             rng = np.random.default_rng(seed)
             np.random.seed(seed)
@@ -406,6 +434,7 @@ class RNN_Data():
         file.close()
         sel0 = label <= 0.5
         sel1 = label >= 0.5
+        #input(jet)
         for key in tqdm(RNN_Data.jet_keys):
             min_val = np.min(jet[key].flatten().flatten())
             max_val = np.max(jet[key].flatten().flatten())
@@ -421,6 +450,7 @@ class RNN_Data():
                                                                                          "{}_{}".format(key, l[1]), 35,
                                                                                          min_val, max_val)
                 rn.fill_hist(self.hists_after_trans["{}_label{}".format(key, str(l[1]))], arr, weights=w)
+        #print(track)
         for key in tqdm(RNN_Data.track_keys):
             a = track[key].flatten().flatten()
             min_val = np.min(a[~np.isnan(a)])
@@ -607,24 +637,34 @@ class RNN_Data():
         jet_untrans = {}
         track_untrans = {}
         tower_untrans = {}
-        b_cs = tree2array(backtree, branches=["jet_cross_section"]).astype(np.float32)
-        s_cs = tree2array(sigtree, branches=["jet_cross_section"]).astype(np.float32)
+        b_cs = np.array([])
+        s_cs = np.array([])
+        for b_tree in backtree:
+            b_cs = np.append(b_cs, tree2array(b_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0)
+        for s_tree in sigtree:
+            s_cs = np.append(s_cs, tree2array(s_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0)
         #s_cs = np.ones_like(s_cs)
         #b_cs = np.ones_like(b_cs)
         cross_section = np.append(b_cs, s_cs).astype(np.float32)
         #cross_section = np.ones_like(cross_section)
         for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                          "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system",
-                              "jet_mass_track_system", "jet_trans_impact_param_sig", "nTrack", "nTower"]):
+                              "jet_mass_track_system", "jet_trans_impact_param_sig", "nTrack", "nTower", "mu"]):
             if jet_var != "jet_TruthTau":
-                backjet = tree2array(backtree, branches=[jet_var]).astype(np.float32)
-                sigjet = tree2array(sigtree, branches=[jet_var]).astype(np.float32)
+                backjet = np.array([])
+                sigjet = np.array([])
+                for b_tree in backtree:
+                    backjet = np.append(backjet, tree2array(b_tree, branches=[jet_var]).astype(np.float32), axis=0)
+                for s_tree in sigtree:
+                    sigjet = np.append(sigjet, tree2array(s_tree, branches=[jet_var]).astype(np.float32), axis=0)
                 jet[jet_var] = np.append(backjet, sigjet, axis=0).astype(np.float32)
                 jet_untrans[jet_var] = np.append(backjet, sigjet, axis=0).astype(np.float32)
                 if jet_var == "nTrack":
                     max_nTrack = int(np.amax(jet["nTrack"]))
                 if jet_var == "nTower":
                     max_nTower = int(np.max(jet["nTower"]))
+                if jet_var == "mu":
+                    self.mu = np.append(backjet, sigjet, axis=0).astype(np.float32)
                 #if jet_var in ["jet_deltaEta", "jet_deltaPhi"]:
                  #   jet[jet_var] = self.abs_var(jet[jet_var])
                 if jet_var in ["jet_PT", "jet_f_cent", "jet_iF_leadtrack"]:
@@ -648,16 +688,31 @@ class RNN_Data():
                 "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
                 , "jet_mass_track_system", "jet_trans_impact_param_sig"]:
                     jet[jet_var] = self.preprocess(jet_var, jet[jet_var], self.scale_flat)
+               # input(jet)
             elif jet_var == "jet_TruthTau":
-                backlabel = tree2array(backtree, branches=["jet_TruthTau"]).astype(np.float32)
-                siglabel = tree2array(sigtree, branches=["jet_TruthTau"]).astype(np.float32)
+                backlabel = np.array([])
+                siglabel = np.array([])
+                for b_tree in backtree:
+                    backlabel = np.append(backlabel, tree2array(b_tree, branches=["jet_TruthTau"]).astype(np.float32), axis=0)
+                for s_tree in sigtree:
+                    siglabel = np.append(siglabel, tree2array(s_tree, branches=["jet_TruthTau"]).astype(np.float32), axis=0)
                 yLabel = np.append(backlabel, siglabel, axis=0)
         max_nTower = 100
         max_nTrack = 100
         for track_var in tqdm(["track_PT", "track_D0", "track_DZ", "track_deltaEta",
                           "track_deltaPhi"]):
-            backtrack = tree2array(backtree, branches=[track_var])
-            sigtrack = tree2array(sigtree, branches=[track_var])
+            backtrack = []
+            sigtrack = []
+            for b_tree in backtree:
+                #print(b_tree)
+                for tr in tree2array(b_tree, branches=[track_var]):
+                    backtrack.append(tr)
+                #print(len(backtrack[0]))
+            for s_tree in sigtree:
+                for tr in tree2array(s_tree, branches=[track_var]):
+                    sigtrack.append(tr)
+            backtrack = np.array(backtrack)
+            sigtrack = np.array(sigtrack)
             temp_arr = np.append(backtrack, sigtrack, axis=0)
             new_arr = np.empty((len(temp_arr), max_nTrack+1), dtype=np.float32)
             new_arr[:][:] = np.NaN
@@ -668,6 +723,7 @@ class RNN_Data():
                         new_arr[idx][jdx] = v
                         jdx += 1
             track[track_var] = new_arr
+            #input(track)
             track_untrans[track_var] = new_arr
             if track_var == "track_PT":
                 track_PT = track["track_PT"]
@@ -685,8 +741,19 @@ class RNN_Data():
    #     print(sorted(range(len(track["track_PT"][3])), key=lambda k: track["track_PT"][3][k], reverse=True))
   #      print(sorted(range(len(track_PT[3])), key=lambda k: track_PT[3][k], reverse=True))
         for tower_var in tqdm(["tower_ET", "tower_deltaEta", "tower_deltaPhi"]):
-            backtower = tree2array(backtree, branches=[tower_var])
-            sigtower = tree2array(sigtree, branches=[tower_var])
+            backtower = []
+            sigtower = []
+            for b_tree in backtree:
+                #print(b_tree)
+                for to in tree2array(b_tree, branches=[tower_var]):
+                    #print(to)
+                    backtower.append(to)
+                #print(len(backtower[0]))
+            for s_tree in sigtree:
+                for to in tree2array(s_tree, branches=[tower_var]):
+                    sigtower.append(to)
+            backtower = np.array(backtower)
+            sigtower = np.array(sigtower)
             temp_arr = np.append(backtower, sigtower, axis=0)
             new_arr = np.empty((len(temp_arr), max_nTower), dtype=np.float32)
             new_arr[:][:] = np.NaN
