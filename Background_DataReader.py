@@ -92,7 +92,9 @@ class Background(Dataset):
             #     weight /= 1827
             # elif dataset_i == 4:
             #     weight /= 231.1
-            weight /= weight_norm
+            #weight /= weight_norm
+
+            weight /= 1
 
             num_Jets = self._branchReader["Jet"].GetEntries()
             self.Tau_Tagger.append([])
@@ -128,27 +130,33 @@ class Background(Dataset):
                 evt_tower = Tower_(entry, evt, weight, tower, hists=print_hist)
                 towers.append(evt_tower)
             for idx in range(0, num_Jets):
+
                 jet = self._branchReader["Jet"].At(idx)
-                self.num_of_object["Jet"] += 1
-                # new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents, hists=print_hist)
-                new_jet = Jet_(entry, idx, evt, weight, event_mu, jet, None, particles, tracks, towers, None, hists=print_hist)
-                self.JetArray.append(new_jet)
-                if print_hist:
-                    self.Fill_Histograms("Jet", jet, weight, new_jet)
-                    if new_jet.TruthTau:
-                        self.Fill_Tau_Histograms("Jet", jet, weight, new_jet)
-                    for Track in new_jet.Tracks:
-                        self.Fill_Histograms("Track", Track.track_obj, weight, Track)
+                ##
+                if (jet.PT >= 20.0 and jet.PT <= 710.0) and abs(jet.Eta) <= 2.5 and abs(jet.Charge) == 1 and (
+                        abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52):
+                ##
+
+                    self.num_of_object["Jet"] += 1
+                    # new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents, hists=print_hist)
+                    new_jet = Jet_(entry, idx, evt, weight, event_mu, jet, None, particles, tracks, towers, None, hists=print_hist)
+                    self.JetArray.append(new_jet)
+                    if print_hist:
+                        self.Fill_Histograms("Jet", jet, weight, new_jet)
                         if new_jet.TruthTau:
-                            self.Fill_Tau_Histograms("Track", Track.track_obj, weight, Track)
-                    for Tower in new_jet.Towers:
-                        self.Fill_Histograms("Tower", Tower.tower_obj, weight, Tower)
-                        if new_jet.TruthTau:
-                            self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight, Tower)
-                    for Particle in new_jet.Particles:
-                        self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
-                        if Particle.PID == 15 or Particle.PID == -15:
+                            self.Fill_Tau_Histograms("Jet", jet, weight, new_jet)
+                        for Track in new_jet.Tracks:
+                            self.Fill_Histograms("Track", Track.track_obj, weight, Track)
+                            if new_jet.TruthTau:
+                                self.Fill_Tau_Histograms("Track", Track.track_obj, weight, Track)
+                        for Tower in new_jet.Towers:
+                            self.Fill_Histograms("Tower", Tower.tower_obj, weight, Tower)
+                            if new_jet.TruthTau:
+                                self.Fill_Tau_Histograms("Tower", Tower.tower_obj, weight, Tower)
+                        for Particle in new_jet.Particles:
                             self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
+                            if Particle.PID == 15 or Particle.PID == -15:
+                                self.Fill_Tau_Histograms("Particle", Particle.particle_obj, weight, Particle)
         if print_hist:
             for branch in {"GenMissingET", "MissingET", "ScalarET", "Particle"}:
                     if branch in list(self.Histograms.keys()):
@@ -239,7 +247,7 @@ class Background(Dataset):
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             for jet in tqdm(self.JetArray):
-                if jet.PT >= 20.0 and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
+                if (jet.PT >= 20.0 and jet.PT <= 710.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1:
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)

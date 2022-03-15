@@ -203,8 +203,8 @@ class RNN_Data():
         bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         #print(bin_edges)
         # Reweighting coefficient
-        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=True, weights=sig_cross_section)
-        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=True, weights=bck_cross_section)
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=False, weights=sig_cross_section)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=False, weights=bck_cross_section)
 
         coeff = sig_hist / bkg_hist
         #print(len(coeff))
@@ -642,10 +642,18 @@ class RNN_Data():
         for b_tree in backtree:
             b_cs = np.append(b_cs, tree2array(b_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0)
         for s_tree in sigtree:
-            s_cs = np.append(s_cs, tree2array(s_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0)
-        #s_cs = np.ones_like(s_cs)
+            s_cs = np.append(s_cs, tree2array(s_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0) * 0.00319
+       # s_cs = np.ones_like(s_cs)
         #b_cs = np.ones_like(b_cs)
         cross_section = np.append(b_cs, s_cs).astype(np.float32)
+        # b_sel = np.array([])
+        # s_sel = np.array([])
+        # for b_tree in backtree:
+        #     bkg_select = np.append(b_sel, tree2array(b_tree, branches=["jet_PT"]).astype(np.float32) < 710., axis=0).astype(np.int32)
+        # for s_tree in sigtree:
+        #     sig_select = np.append(s_sel, tree2array(s_tree, branches=["jet_PT"]).astype(np.float32) < 710., axis=0).astype(np.int32)
+        # full_select = np.append(bkg_select, sig_select).astype(np.int32).tolist()
+
         #cross_section = np.ones_like(cross_section)
         for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                          "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system",
@@ -676,7 +684,8 @@ class RNN_Data():
                             b_cs = b_cs
                             sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs)
                             self.pt_weights = np.append(bck_pt_w, sig_pt_w, axis=0)
-                            self.new_weights = cross_section * self.pt_weights
+                            #self.new_weights = cross_section * self.pt_weights
+                            self.new_weights = self.pt_weights
                             jet[jet_var] = self.log_epsilon(jet[jet_var])
                             jet["untrans_jet_PT"] = jet_untrans[jet_var]
                         elif jet_var in ["jet_f_cent", "jet_iF_leadtrack"]:
@@ -780,6 +789,7 @@ class RNN_Data():
             #     tower[tower_var] = self.preprocess(tower_var, tower[tower_var], partial(self.min_max_scale, per_obj=False))
        # print(sorted(range(len(tower["tower_ET"][3])), key=lambda k: tower["tower_ET"][3][k], reverse=True))
       #  print(sorted(range(len(tower_ET[3])), key=lambda k: tower_ET[3][k], reverse=True))
+
 
         file = open(self.dicts_file, "wb")
         pickle.dump([jet, track, tower, yLabel, cross_section, self.pt_weights, self.new_weights], file)

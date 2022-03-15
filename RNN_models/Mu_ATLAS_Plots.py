@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import matplotlib as mpl
-from ATLAS_utils import colors, colorseq, roc, roc_ratio, \
+from Mu_ATLAS_Utils import colors, colorseq, roc, roc_ratio, \
     binned_efficiency_ci
 from flattener import Flattener
 from scipy.stats import binned_statistic, binned_statistic_2d
@@ -65,9 +65,11 @@ pt_bins = np.array([
     1000000.000
 ])
 
-mu_bins = np.array([
-    0, 10, 12, 14, 16, 18, 20, 22, 24, 50
-    ]) * 2
+#mu_bins = np.array([
+ #   0, 10, 12, 14, 16, 18, 20, 22, 24, 50
+  #  ]) * 2
+
+mu_bins = np.array([30, 33, 38, 42, 48, 52, 56, 63, 70, 80])
 
 class Plot(object):
     def __init__(self):
@@ -328,7 +330,7 @@ class EfficiencyPlot(Plot):
 
 
     def plot(self, sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-             sig_test_mu, xvar_name, xvar):
+             sig_test_mu, xvar_name, xvar, xvar_weight):
 
         # Determine flattening on training sample for all scores
         flat = Flattener(pt_bins, mu_bins, self.eff)
@@ -338,28 +340,35 @@ class EfficiencyPlot(Plot):
         pass_thr = flat.passes_thr(sig_test_pt, sig_test_mu, sig_test_score)
 
         efficiencies = binned_efficiency_ci(xvar, pass_thr,
-                                            bins=self.bins)
+                                            bins=self.bins, weight=xvar_weight)
+
+        print(efficiencies)
 
         # Plot
         fig, ax = plt.subplots()
 
-     #   bin_center = self.scale * (self.bins[1:] + self.bins[:-1]) / 2.0
-      #  bin_half_width = self.scale * (self.bins[1:] - self.bins[:-1]) / 2.0
+        bin_center = self.scale * (self.bins[1:] + self.bins[:-1]) / 2.0
+        bin_half_width = self.scale * (self.bins[1:] - self.bins[:-1]) / 2.0
         if self.label != None:
             for z, (eff, c, label) in enumerate(
                     zip(efficiencies, colorseq, self.label)):
                 ci_lo, ci_hi = eff.ci
                 yerr = np.vstack([eff.median - ci_lo, ci_hi - eff.median])
+                ax.errorbar(bin_center, eff.median,
+                            xerr=bin_half_width,
+                            yerr=yerr,
+                            fmt="o", color=c, label=label, zorder=z)
+
         else:
             for z, (eff, c) in enumerate(
                     zip(efficiencies, colorseq)):
                 ci_lo, ci_hi = eff.ci
                 yerr = np.vstack([eff.median - ci_lo, ci_hi - eff.median])
 
-       #     ax.errorbar(bin_center, eff.median,
-          #              xerr=bin_half_width,
-           #             yerr=yerr,
-            #            fmt="o", color=c, label=label, zorder=z)
+                ax.errorbar(bin_center, eff.median,
+                            xerr=bin_half_width,
+                            yerr=yerr,
+                            fmt="o", color=c, zorder=z)
 
         if self.ylim:
             ax.set_ylim(self.ylim)
@@ -401,27 +410,33 @@ class RejectionPlot(Plot):
                                           weight=bkg_test_weight,
                                           bins=self.bins, return_inverse=True)
 
+        print(rejections)
+
         # Plot
         fig, ax = plt.subplots()
 
-       # bin_center = self.scale * (self.bins[1:] + self.bins[:-1]) / 2.0
-        #bin_half_width = self.scale * (self.bins[1:] - self.bins[:-1]) / 2.0
+        bin_center = self.scale * (self.bins[1:] + self.bins[:-1]) / 2.0
+        bin_half_width = self.scale * (self.bins[1:] - self.bins[:-1]) / 2.0
 
         if self.label != None:
             for z, (rej, c, label) in enumerate(
                     zip(rejections, colorseq, self.label)):
                 ci_lo, ci_hi = rej.ci
                 yerr = np.vstack([rej.median - ci_lo, ci_hi - rej.median])
+                ax.errorbar(bin_center, rej.median,
+                            xerr=bin_half_width,
+                            yerr=yerr,
+                            fmt="o", color=c, label=label, zorder=z)
         else:
             for z, (rej, c) in enumerate(
                     zip(rejections, colorseq)):
                 ci_lo, ci_hi = rej.ci
                 yerr = np.vstack([rej.median - ci_lo, ci_hi - rej.median])
 
-         #   ax.errorbar(bin_center, rej.median,
-          #              xerr=bin_half_width,
-           #             yerr=yerr,
-            #            fmt="o", color=c, label=label, zorder=z)
+                ax.errorbar(bin_center, rej.median,
+                            xerr=bin_half_width,
+                            yerr=yerr,
+                           fmt="o", color=c, zorder=z)
 
         if self.ylim:
             ax.set_ylim(self.ylim)

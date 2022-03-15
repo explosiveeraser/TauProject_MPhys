@@ -24,8 +24,8 @@ class Flattener:
         passes_thr : (N,) array of bools
             Array indicating which of the inputs pass the working point.
         """
-        x = np.asarray(x).astype(np.float32)
-        y = np.asarray(y).astype(np.float32)
+       # x = np.asarray(x).astype(np.float32)
+       # y = np.asarray(y).astype(np.float32)
         values = values[:,0]
         print("len x: {} | y: {} | values: {}".format(np.shape(x), np.shape(y), np.shape(values)))
         statistic, _, _, binnumber = binned_statistic_2d(
@@ -34,8 +34,12 @@ class Flattener:
             bins=[self.x_bins, self.y_bins], expand_binnumbers=True
         )
 
+        #print(statistic)
+
         self.cutmap = statistic
         x_idx, y_idx = binnumber[0, :] - 1, binnumber[1, :] - 1
+
+
 
         return values > self.cutmap[x_idx, y_idx]
 

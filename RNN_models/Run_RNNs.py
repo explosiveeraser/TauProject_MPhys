@@ -43,6 +43,66 @@ import root_numpy as rn
 #from rootpy.plotting import Hist
 from Plots import Plots
 
+import matplotlib as mpl
+from Mu_ATLAS_Utils import colors, colorseq, roc, roc_ratio, \
+    binned_efficiency_ci
+from flattener import Flattener
+from scipy.stats import binned_statistic, binned_statistic_2d
+
+def mpl_setup(scale=0.49, aspect_ratio=8.0 / 6.0,
+              pad_left=0.16, pad_bottom=0.18,
+              pad_right=0.95, pad_top=0.95):
+    mpl.rcParams["font.sans-serif"] = ["Liberation Sans", "helvetica",
+                                       "Helvetica", "Arial"]
+    mpl.rcParams["font.family"] = "sans-serif"
+    mpl.rcParams["font.size"] = 8
+    mpl.rcParams["mathtext.default"] = "regular"
+
+    # LaTeX \the\textwidth
+    text_width_pt = 451.58598
+    inches_per_pt = 1.0 / 72.27
+    fig_width = text_width_pt * inches_per_pt * scale
+    fig_height = fig_width / aspect_ratio
+
+    mpl.rcParams["figure.figsize"] = [fig_width, fig_height]
+
+    mpl.rcParams["figure.subplot.left"] = pad_left
+    mpl.rcParams["figure.subplot.bottom"] = pad_bottom
+    mpl.rcParams["figure.subplot.top"] = pad_top
+    mpl.rcParams["figure.subplot.right"] = pad_right
+
+    mpl.rcParams["axes.xmargin"] = 0.0
+    mpl.rcParams["axes.ymargin"] = 0.0
+
+    mpl.rcParams["axes.labelsize"] = 10
+    mpl.rcParams["axes.linewidth"] = 0.6
+
+    mpl.rcParams["xtick.major.size"] = 6.0
+    mpl.rcParams["xtick.major.width"] = 0.6
+    mpl.rcParams["xtick.minor.size"] = 3.0
+    mpl.rcParams["xtick.minor.width"] = 0.6
+    mpl.rcParams["xtick.minor.visible"] = True
+    mpl.rcParams["xtick.top"] = True
+    mpl.rcParams["xtick.direction"] = "in"
+    mpl.rcParams["xtick.labelsize"] = 8
+
+    mpl.rcParams["ytick.major.size"] = 6.0
+    mpl.rcParams["ytick.major.width"] = 0.6
+    mpl.rcParams["ytick.minor.size"] = 3.0
+    mpl.rcParams["ytick.minor.width"] = 0.6
+    mpl.rcParams["ytick.minor.visible"] = True
+    mpl.rcParams["ytick.right"] = True
+    mpl.rcParams["ytick.direction"] = "in"
+    mpl.rcParams["ytick.labelsize"] = 8
+
+    mpl.rcParams["legend.frameon"] = False
+
+    mpl.rcParams["lines.linewidth"] = 1.1
+    mpl.rcParams["lines.markersize"] = 3.0
+
+####
+
+
 def plot_1_histogram(name, data, weight, num_bins):
     hist_max = np.max(data)
     hist_min = np.max(data)
@@ -97,6 +157,19 @@ def plot_2_histogram(name, sig_data, bck_data, sig_weight, bck_weight, num_bins,
     canvas.Update()
     canvas.Print("{}_back_sig.pdf".format(name))
 
+
+def plt_2hist(name, sig_data, bck_data, sig_weight, bck_weight, num_bins, bins=False, log_plot=False, hist_max=None, hist_min=None):
+    fig, ax = plt.subplots()
+    ax.hist(sig_data, weights=sig_weight,
+            color=colors["red"], label="signal", bins=num_bins, density=True, histtype="step")
+    ax.hist(bck_data, weights=bck_weight,
+            color=colors["blue"], label="background", bins=num_bins, density=True, histtype="step")
+    if log_plot:
+        ax.set_yscale("log")
+    ax.autoscale()
+    return fig
+
+
 def plot_graph(name, x_data, y_data, n_points):
     graph = ROOT.TGraph(n_points, x_data, y_data)
     canvas = ROOT.TCanvas("Hist_Data_{}".format(name), "Hist_Data_{}".format(name))
@@ -119,7 +192,7 @@ else:
     from ATLAS_RNN_Plots import ScorePlot, FlattenerCutmapPlot, FlattenerEfficiencyPlot, EfficiencyPlot, RejectionPlot
 
 
-DataP1 = RNN_Data(1, True, "prong1_data", print_hists=True,
+DataP1 = RNN_Data(1, False, "prong1_data", print_hists=True,
                   BacktreeFile=["0_background_wPU_tree_1-Prong", "1_background_wPU_tree_1-Prong", "2_background_wPU_tree_1-Prong", "3_background_wPU_tree_1-Prong", "4_background_wPU_tree_1-Prong"]
                 , BackTreeName=["0_background_wPU_tree", "1_background_wPU_tree", "2_background_wPU_tree", "3_background_wPU_tree", "4_background_wPU_tree"]
                   , SignaltreeFile=["signal_wPU_tree_1-Prong"], SignalTreeName=["signal_wPU_tree"], BackendPartOfTree="", SignalendPartOfTree="")
@@ -137,18 +210,35 @@ if do_RNN:
     Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:6,:], DataP1.input_tower[:,0:10,:], DataP1.input_jet[:, 1:12]], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain, DataP1.new_weights, DataP1.cross_section, DataP1.mu)
     plot_2_histogram("Train_weights-Eval_weights", Prong1Model.w_train, Prong1Model.eval_w, np.ones_like(Prong1Model.w_train), np.ones_like(Prong1Model.eval_w), 70)
 
+    all_sig_pt = Prong1Model.jet_pt[Prong1Model.index_of_sig_bck == "s"]
+    all_bgk_pt = Prong1Model.jet_pt[Prong1Model.index_of_sig_bck == "b"]
+    all_sig_w = Prong1Model.w[Prong1Model.index_of_sig_bck == "s"]
+    all_bgk_w = Prong1Model.w[Prong1Model.index_of_sig_bck == "b"]
+    bck_weight = Prong1Model.w[Prong1Model.index_of_sig_bck == "b"]
+    plot_2_histogram("All_Jet_PT", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0)
+
+
+    plt_2hist("All_Jet_PT", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0, log_plot=True)
+
+
+
     training_sig_pt = Prong1Model.train_jet_pt[Prong1Model.train_sigbck_index == "s"]
     print("{}--------------".format(len(training_sig_pt)))
     training_bck_pt = Prong1Model.train_jet_pt[Prong1Model.train_sigbck_index == "b"]
     train_s_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "s"]
     train_b_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "b"]
-    plot_2_histogram("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=3300.0)
+    #plot_2_histogram("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=3300.0)
+    plt_2hist("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=3300.0)
+
 
     eval_sig_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "s"]
     eval_bck_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "b"]
     eval_s_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "s"]
     eval_b_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "b"]
-    plot_2_histogram("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=3300.0)
+    #plot_2_histogram("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=3300.0)
+    plt_2hist("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=3300.0)
+
+    plt.show()
 
     sig_pt = DataP1.sig_pt
     bck_pt = DataP1.bck_pt
@@ -213,7 +303,7 @@ if do_RNN:
     # Prong1Model.plot_feature_heatmap({"track_PT", "track_D0", "track_DZ", "track_deltaEta",
     #                 "track_deltaPhi", "tower_ET", "tower_deltaEta", "tower_deltaPhi", "jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
     #             "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system"
-    #             , "jet_mass_track_system"}, Prong1Model.RNNmodel)
+    #             , "jet_mass_track_system"}, Prong1Model.RNNmodl)
 
     Prong1Model.evaluate_model(Prong1Model.eval_inputs, Prong1Model.eval_y, Prong1Model.eval_w, Prong1Model.RNNmodel)
 
@@ -262,7 +352,6 @@ if do_RNN:
     sig_test_score.flatten()
     if pile_up:
         sig_test_mu = Prong1Model.eval_mu[Prong1Model.eval_sigbck_index == "s"]
-
     bkg_test_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "b"]
     bkg_test_weight = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "b"]
 
@@ -276,7 +365,7 @@ if do_RNN:
     rnn_score.plot(sig_train_score, bkg_train_score, sig_train_weight, bkg_train_weight,
                    sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight)
     plt.show()
-    input("Enter..")
+  #  input("Enter..")
 
     #Test ATLAS plotting algorithm
     if pile_up:
@@ -287,14 +376,44 @@ if do_RNN:
         RPs = []
         plots = []
         plots_idx = 0
+        # PT
+        sig_test_xvar = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "s"]
+        bkg_test_xvar = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "b"]
+        pt_max_sig = np.max(sig_test_xvar)
+        pt_min_sig = np.min(sig_test_xvar)
+        stest_bins_pt = np.percentile(sig_test_xvar, np.linspace(0.0, 100.0, 16))
+        btest_bins_pt = np.percentile(bkg_test_xvar, np.linspace(0.0, 100.0, 16))
+        pt_efficiency = EfficiencyPlot(60 / 100, bins=stest_bins_pt)
+        pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "Jet PT",
+                                    sig_test_xvar, sig_test_weight)
+        pt_rejection = RejectionPlot(60 / 100, bins=btest_bins_pt)
+        pt_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight, bkg_test_pt,
+                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "Jet PT")
+        # Mu
+        # sig_test_xvar = Prong1Model.eval_mu[Prong1Model.eval_sigbck_index == "s"]
+        # bkg_test_xvar = Prong1Model.eval_mu[Prong1Model.eval_sigbck_index == "b"]
+        # mu_max_sig = np.max(sig_test_xvar)
+        # mu_min_sig = np.min(sig_test_xvar)
+        # mu_efficiency = EfficiencyPlot(60 / 100, bins=np.linspace(0, 75, 16))
+        # mu_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+        #                                  sig_test_mu, "Number of Vertices in Event",
+        #                                  sig_test_xvar)
+        # mu_rejection = RejectionPlot(60 / 100, bins=np.linspace(0, 75, 16))
+        # mu_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+        #                                 bkg_test_pt,
+        #                                 bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "Number of Vertices in Event")
+        plt.show()
+        input("enter...")
         for idx in tqdm.trange(0, len(Prong1Model.inputs[2][0, 1:12])):
             sig_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "s", idx]
             bkg_test_xvar = Prong1Model.eval_inputs[2][Prong1Model.eval_sigbck_index == "b", idx]
-            EPs.append(EfficiencyPlot(60 / 100))
+            max_sig = np.max(sig_test_xvar)
+            min_sig = np.min(sig_test_xvar)
+            EPs.append(EfficiencyPlot(60 / 100, bins=np.linspace(min_sig, max_sig, 10)))
             plots.append(
                 EPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "xvar_{}".format(idx),
                                     sig_test_xvar))
-            RPs.append(RejectionPlot(60 / 100))
+            RPs.append(RejectionPlot(60 / 100, bins=np.linspace(min_sig, max_sig, 10)))
             plots.append(RPs[plots_idx].plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight, bkg_test_pt,
                                              bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "xvar_{}".format(idx)))
         plt.show()

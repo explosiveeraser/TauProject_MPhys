@@ -119,10 +119,13 @@ def roc_ratio(y_true, y1, y2, **kwargs):
 
 def binned_efficiency_ci(x, pass_sel, weight=None, ci=68.3, nbootstrap=200,
                          return_inverse=False, return_raw=False, **kwargs):
+
     if not isinstance(pass_sel, list):
         pass_sel = [pass_sel]
 
+
     pass_sel = [p.astype(np.float32) for p in pass_sel]
+
 
     # Check inputs
     if weight is not None:
@@ -155,6 +158,8 @@ def binned_efficiency_ci(x, pass_sel, weight=None, ci=68.3, nbootstrap=200,
         else:
             total_hist, _, _ = binned_statistic(x_bs, None, statistic="count",
                                                 **kwargs)
+
+      #  print(x_bs)
 
         for i, pass_hist in enumerate(pass_hists):
             efficiency[i].append(pass_hist / total_hist)

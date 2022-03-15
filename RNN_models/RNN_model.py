@@ -112,7 +112,8 @@ class Tau_Model():
             elif self.train_sigbck_index[idx] == "b":
                 self.w_train[idx] = train_bck_weight[b_idx]
                 b_idx += 1
-        self.w_train = np.asarray(self.w_train * self.training_cross_sections).astype(np.float32)
+        #self.w_train = np.asarray(self.w_train * self.training_cross_sections).astype(np.float32)
+        self.w_train = np.asarray(self.w_train).astype(np.float32)
         self.eval_inputs = [self.track_data[0:int(len(self.jet_data)/2+1)], self.tower_data[0:int(len(self.jet_data)/2+1)],
                             self.jet_data[0:int(len(self.jet_data)/2+1)]]
         self.eval_y = self.y_data[0:int(len(self.jet_data)/2+1)]
@@ -133,7 +134,8 @@ class Tau_Model():
             elif self.eval_sigbck_index[idx] == "b":
                 self.eval_w[idx] = eval_bck_weight[b_idx]
                 b_idx += 1
-        self.eval_w = np.asarray(self.eval_w * self.eval_cross_sections).astype(np.float32)
+        #self.eval_w = np.asarray(self.eval_w * self.eval_cross_sections).astype(np.float32)
+        self.eval_w = np.asarray(self.eval_w).astype(np.float32)
         t = []
         for p in tqdm(self.eval_sigbck_index):
             if p == "b":
@@ -278,14 +280,14 @@ class Tau_Model():
         # Setup Callbacks
         callbacks = []
 
-        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=35, verbose=1)
+        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1)
         callbacks.append(early_stopping)
 
         model_checkpoint = ModelCheckpoint(
             "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
         callbacks.append(model_checkpoint)
 
-        reduce_lr = ReduceLROnPlateau(patience=10, verbose=1, min_lr=1e-4)
+        reduce_lr = ReduceLROnPlateau(patience=6, verbose=1, min_lr=1e-4)
         callbacks.append(reduce_lr)
         # End of setup callbacks
         if type(model) == str:
@@ -318,8 +320,8 @@ class Tau_Model():
         bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         print(bin_edges)
         # Reweighting coefficient
-        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=True, weights=sig_cross_section)
-        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=True, weights=bck_cross_section)
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=False, weights=sig_cross_section)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=False, weights=bck_cross_section)
 
         coeff = sig_hist / bkg_hist
         #print(coeff)
