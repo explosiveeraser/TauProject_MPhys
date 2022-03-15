@@ -112,8 +112,8 @@ class Tau_Model():
             elif self.train_sigbck_index[idx] == "b":
                 self.w_train[idx] = train_bck_weight[b_idx]
                 b_idx += 1
-        #self.w_train = np.asarray(self.w_train * self.training_cross_sections).astype(np.float32)
-        self.w_train = np.asarray(self.w_train).astype(np.float32)
+        self.w_train = np.asarray(self.w_train * self.training_cross_sections).astype(np.float32)
+        #self.w_train = np.asarray(self.w_train).astype(np.float32)
         self.eval_inputs = [self.track_data[0:int(len(self.jet_data)/2+1)], self.tower_data[0:int(len(self.jet_data)/2+1)],
                             self.jet_data[0:int(len(self.jet_data)/2+1)]]
         self.eval_y = self.y_data[0:int(len(self.jet_data)/2+1)]
@@ -134,8 +134,8 @@ class Tau_Model():
             elif self.eval_sigbck_index[idx] == "b":
                 self.eval_w[idx] = eval_bck_weight[b_idx]
                 b_idx += 1
-        #self.eval_w = np.asarray(self.eval_w * self.eval_cross_sections).astype(np.float32)
-        self.eval_w = np.asarray(self.eval_w).astype(np.float32)
+        self.eval_w = np.asarray(self.eval_w * self.eval_cross_sections).astype(np.float32)
+        #self.eval_w = np.asarray(self.eval_w).astype(np.float32)
         t = []
         for p in tqdm(self.eval_sigbck_index):
             if p == "b":

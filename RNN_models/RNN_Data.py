@@ -643,7 +643,7 @@ class RNN_Data():
             b_cs = np.append(b_cs, tree2array(b_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0)
         for s_tree in sigtree:
             s_cs = np.append(s_cs, tree2array(s_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0) * 0.00319
-       # s_cs = np.ones_like(s_cs)
+        s_cs = np.ones_like(s_cs)
         #b_cs = np.ones_like(b_cs)
         cross_section = np.append(b_cs, s_cs).astype(np.float32)
         # b_sel = np.array([])
@@ -684,8 +684,8 @@ class RNN_Data():
                             b_cs = b_cs
                             sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs)
                             self.pt_weights = np.append(bck_pt_w, sig_pt_w, axis=0)
-                            #self.new_weights = cross_section * self.pt_weights
-                            self.new_weights = self.pt_weights
+                            self.new_weights = cross_section * self.pt_weights
+                            #self.new_weights = self.pt_weights
                             jet[jet_var] = self.log_epsilon(jet[jet_var])
                             jet["untrans_jet_PT"] = jet_untrans[jet_var]
                         elif jet_var in ["jet_f_cent", "jet_iF_leadtrack"]:

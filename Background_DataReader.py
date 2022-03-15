@@ -44,7 +44,7 @@ class Background(Dataset):
                                      "Tower"]
         elif pile_up:
             self._Object_Includer = ["Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT",
-                                     "Track", "Tower", "PileUpMix", "Vertex"]
+                                     "Track", "Tower", "PileUpMix", "Vertex", "Rho"]
         self._reader = ROOT.ExRootTreeReader(self.chain)
         self._branches = list(b for b in map(lambda b: b.GetName(), self.chain.GetListOfBranches()))
         for branch in self._branches:
@@ -65,7 +65,7 @@ class Background(Dataset):
                 self.num_of_object[branch] = 0
         elif pile_up:
             for branch in {"Event", "Weight", "Jet", "Particle", "GenMissingET", "MissingET", "ScalarHT", "Track",
-                           "Tower", "PileUpMix", "Vertex"}:
+                           "Tower", "PileUpMix", "Vertex", "Rho"}:
                 self._branchReader[branch] = self._reader.UseBranch(branch)
                 self.num_of_object[branch] = 0
         self.num_of_object["Tower"] = 0
@@ -105,6 +105,9 @@ class Background(Dataset):
                 self._branchReader["Vertex"].GetEntries()
                 event_mu = len(self._branchReader["Vertex"])
                 pileup_particles = []
+                num_rho = self._branchReader["Rho"].GetEntries()
+                for idx in range(0, num_rho):
+                    event_rho = self._branchReader["Rho"].At(idx).Rho
             else:
                 event_mu = 1
             num_tracks = self._branchReader["Track"].GetEntries()
@@ -139,7 +142,7 @@ class Background(Dataset):
 
                     self.num_of_object["Jet"] += 1
                     # new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents, hists=print_hist)
-                    new_jet = Jet_(entry, idx, evt, weight, event_mu, jet, None, particles, tracks, towers, None, hists=print_hist)
+                    new_jet = Jet_(entry, idx, evt, weight, event_mu, event_rho, jet, None, particles, tracks, towers, None, hists=print_hist)
                     self.JetArray.append(new_jet)
                     if print_hist:
                         self.Fill_Histograms("Jet", jet, weight, new_jet)

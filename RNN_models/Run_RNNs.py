@@ -192,7 +192,7 @@ else:
     from ATLAS_RNN_Plots import ScorePlot, FlattenerCutmapPlot, FlattenerEfficiencyPlot, EfficiencyPlot, RejectionPlot
 
 
-DataP1 = RNN_Data(1, False, "prong1_data", print_hists=True,
+DataP1 = RNN_Data(1, True, "prong1_data", print_hists=False,
                   BacktreeFile=["0_background_wPU_tree_1-Prong", "1_background_wPU_tree_1-Prong", "2_background_wPU_tree_1-Prong", "3_background_wPU_tree_1-Prong", "4_background_wPU_tree_1-Prong"]
                 , BackTreeName=["0_background_wPU_tree", "1_background_wPU_tree", "2_background_wPU_tree", "3_background_wPU_tree", "4_background_wPU_tree"]
                   , SignaltreeFile=["signal_wPU_tree_1-Prong"], SignalTreeName=["signal_wPU_tree"], BackendPartOfTree="", SignalendPartOfTree="")
@@ -218,7 +218,7 @@ if do_RNN:
     plot_2_histogram("All_Jet_PT", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0)
 
 
-    plt_2hist("All_Jet_PT", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0, log_plot=True)
+    plt_2hist("All_Jet_PT", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
 
 
 
@@ -228,7 +228,7 @@ if do_RNN:
     train_s_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "s"]
     train_b_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "b"]
     #plot_2_histogram("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=3300.0)
-    plt_2hist("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=3300.0)
+    plt_2hist("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
 
 
     eval_sig_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "s"]
@@ -236,7 +236,7 @@ if do_RNN:
     eval_s_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "s"]
     eval_b_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "b"]
     #plot_2_histogram("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=3300.0)
-    plt_2hist("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=3300.0)
+    plt_2hist("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
 
     plt.show()
 
@@ -382,7 +382,7 @@ if do_RNN:
         pt_max_sig = np.max(sig_test_xvar)
         pt_min_sig = np.min(sig_test_xvar)
         stest_bins_pt = np.percentile(sig_test_xvar, np.linspace(0.0, 100.0, 16))
-        btest_bins_pt = np.percentile(bkg_test_xvar, np.linspace(0.0, 100.0, 16))
+        btest_bins_pt = np.percentile(bkg_test_xvar, np.linspace(0.0, 100.0, 9))
         pt_efficiency = EfficiencyPlot(60 / 100, bins=stest_bins_pt)
         pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "Jet PT",
                                     sig_test_xvar, sig_test_weight)
