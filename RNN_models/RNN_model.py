@@ -43,6 +43,7 @@ from tqdm import tqdm, trange
 from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.metrics import roc_curve
 from sklearn.metrics import auc
+from Weighted_Array import weight_array
 
 
 
@@ -58,7 +59,7 @@ class Tau_Model():
         0, 10, 12, 14, 16, 18, 20, 22, 24, 50
     ]) * 2
 
-    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights, cross_sections, mu):
+    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights, cross_sections, mu, kinematic_vars=None):
         self.prong = Prongs
         self.output = TFile.Open("Prong-{}_RNN_Model.root".format(str(Prongs)), "RECREATE")
         self.track_data = inputs[0]
@@ -70,6 +71,8 @@ class Tau_Model():
         self.w = weights
         self.cross_sections = cross_sections
         self.mu = mu
+        if kinematic_vars:
+            self.kinematic_vars = kinematic_vars
         self.jet_pt = jet_pt
         start_sig_index = -len(self.sig_pt)
         end_bck_index = len(self.bck_pt)
@@ -87,6 +90,9 @@ class Tau_Model():
         self.w = self.w[shuffled_indices]
         self.cross_sections = self.cross_sections[shuffled_indices]
         self.mu = self.mu[shuffled_indices]
+        if kinematic_vars:
+            for key in kinematic_vars.keys():
+                self.kinematic_vars[key] = self.kinematic_vars[key][shuffled_indices]
         self.index_of_sig_bck = self.index_of_sig_bck[shuffled_indices]
         self.jet_pt = self.jet_pt[shuffled_indices]
         #self.jet_pt = np.append(self.bck_pt, self.sig_pt)[shuffled_indices]
@@ -97,11 +103,17 @@ class Tau_Model():
         self.train_sigbck_index = self.index_of_sig_bck[int(len(self.jet_data)/2+1):-1]
         self.train_jet_pt = self.jet_pt[int(len(self.jet_data)/2+1):-1]
         #self.w_train = self.w[int(len(self.jet_data)/2+1):-1]
-
+        train_multiplier = len(self.train_jet_pt[self.train_sigbck_index == "b"])/len(self.train_jet_pt[self.train_sigbck_index == "s"])
+        train_multiplier = 1.
         train_sig_weight, train_bck_weight = self.pt_reweight(self.train_jet_pt[self.train_sigbck_index == "s"], self.train_jet_pt[self.train_sigbck_index == "b"],
-                                        self.training_cross_sections[self.train_sigbck_index == "s"], self.training_cross_sections[self.train_sigbck_index == "b"])
+                                        self.training_cross_sections[self.train_sigbck_index == "s"], self.training_cross_sections[self.train_sigbck_index == "b"],
+                                                              multiplier=train_multiplier)
 
         self.mu_train = self.mu[int(len(self.jet_data)/2+1):-1]
+        if kinematic_vars:
+            self.train_kinematic_vars = {}
+            for key in kinematic_vars.keys():
+                self.train_kinematic_vars[key] = self.kinematic_vars[key][int(len(self.jet_data)/2+1):-1]
         self.w_train = [0.] * len(self.train_sigbck_index)
         s_idx = 0
         b_idx = 0
@@ -121,9 +133,16 @@ class Tau_Model():
         self.eval_sigbck_index = self.index_of_sig_bck[0:int(len(self.jet_data)/2+1)]
         self.eval_jet_pt = self.jet_pt[0:int(len(self.jet_data)/2+1)]
         # self.eval_w = self.w[0:int(len(self.jet_data)/2+1)]
+        eval_multiplier = len(self.eval_jet_pt[self.eval_sigbck_index == "b"])/len(self.eval_jet_pt[self.eval_sigbck_index == "s"])
+        eval_multiplier = 1.
         eval_sig_weight, eval_bck_weight = self.pt_reweight(self.eval_jet_pt[self.eval_sigbck_index == "s"], self.eval_jet_pt[self.eval_sigbck_index == "b"],
-                                       self.eval_cross_sections[self.eval_sigbck_index == "s"], self.eval_cross_sections[self.eval_sigbck_index == "b"])
+                                       self.eval_cross_sections[self.eval_sigbck_index == "s"], self.eval_cross_sections[self.eval_sigbck_index == "b"],
+                                                            multiplier=eval_multiplier)
         self.eval_mu = self.mu[0:int(len(self.jet_data)/2+1)]
+        if kinematic_vars:
+            self.eval_kinematic_vars = {}
+            for key in kinematic_vars.keys():
+                self.eval_kinematic_vars[key] = self.kinematic_vars[key][0:int(len(self.jet_data)/2+1)]
         self.eval_w = [0.] * len(self.eval_sigbck_index)
         s_idx = 0
         b_idx = 0
@@ -280,14 +299,14 @@ class Tau_Model():
         # Setup Callbacks
         callbacks = []
 
-        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1)
+        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=35, verbose=1)
         callbacks.append(early_stopping)
 
         model_checkpoint = ModelCheckpoint(
             "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
         callbacks.append(model_checkpoint)
 
-        reduce_lr = ReduceLROnPlateau(patience=6, verbose=1, min_lr=1e-4)
+        reduce_lr = ReduceLROnPlateau(patience=12, verbose=1, min_lr=1e-4)
         callbacks.append(reduce_lr)
         # End of setup callbacks
         if type(model) == str:
@@ -311,17 +330,19 @@ class Tau_Model():
         print("Taus Not IDed : ", results[5])
         print("Total Taus: ",results[3]+results[5])
 
-    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
+    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section, density=True, multiplier=1.):
         # Binning
-        bin_edges = np.percentile(bkg_pt, np.linspace(0.0, 100.0, 50))
+        #sig_weighted = weight_array(sig_pt, sig_cross_section)
+        bck_weighted = bkg_pt
+        bin_edges = np.percentile(bck_weighted, np.linspace(0.0, 100.0, 50))
 
         bin_edges[0] = 20.0  # 20 GeV lower limit
 
         bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         print(bin_edges)
         # Reweighting coefficient
-        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=False, weights=sig_cross_section)
-        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=False, weights=bck_cross_section)
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=density, weights=sig_cross_section)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=density, weights=bck_cross_section)
 
         coeff = sig_hist / bkg_hist
         #print(coeff)
@@ -329,7 +350,7 @@ class Tau_Model():
         sig_weight = np.ones_like(sig_pt)
         bkg_weight = coeff[np.digitize(bkg_pt, bin_edges) - 1].astype(np.float32)
 
-        return sig_weight, bkg_weight
+        return sig_weight, bkg_weight * multiplier
 
     def get_train_scores(self, model, inputs):
         train_y = model.predict(inputs)

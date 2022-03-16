@@ -69,7 +69,9 @@ pt_bins = np.array([
  #   0, 10, 12, 14, 16, 18, 20, 22, 24, 50
   #  ]) * 2
 
-mu_bins = np.array([30, 33, 38, 42, 48, 52, 56, 63, 70, 80])
+mu_bins = np.array([
+    -0.5, 10.5, 19.5, 23.5, 27.5, 31.5, 35.5, 39.5, 49.5, 101.5
+])
 
 class Plot(object):
     def __init__(self):
@@ -92,7 +94,7 @@ class ScorePlot(Plot):
 
 
     def plot(self, sig_train, bkg_train, sig_train_weight, bkg_train_weight,
-             sig_test, bkg_test, sig_test_weight, bkg_test_weight):
+             sig_test, bkg_test, sig_test_weight, bkg_test_weight, name, save_dir):
 
         # Plot
         fig, ax = plt.subplots()
@@ -128,6 +130,7 @@ class ScorePlot(Plot):
         y_lo = 10e-3
         ax.set_ylim(y_lo, y_hi)
 
+        plt.savefig("{}{}_score_plot.png".format(save_dir, name))
         return fig
 
 
@@ -330,7 +333,7 @@ class EfficiencyPlot(Plot):
 
 
     def plot(self, sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-             sig_test_mu, xvar_name, xvar, xvar_weight):
+             sig_test_mu, xvar_name, xvar, xvar_weight, save_dir):
 
         # Determine flattening on training sample for all scores
         flat = Flattener(pt_bins, mu_bins, self.eff)
@@ -381,6 +384,7 @@ class EfficiencyPlot(Plot):
         ax.set_ylabel("Efficiency {}".format(xvar_name), y=1, ha="right")
         ax.legend()
 
+        plt.savefig("{}{}.png".format(save_dir, xvar_name))
         return fig
 
 
@@ -398,7 +402,7 @@ class RejectionPlot(Plot):
 
 
     def plot(self, sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-             bkg_test_pt, bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, xvar_name):
+             bkg_test_pt, bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, xvar_name, save_dir):
 
         flat = Flattener(pt_bins, mu_bins, self.eff)
         flat.fit(sig_train_pt, sig_train_mu, sig_train_score)
@@ -448,5 +452,6 @@ class RejectionPlot(Plot):
         ax.set_xlabel(xvar_name.split("/")[-1], x=1, ha="right")
         ax.set_ylabel("Rejection {}".format(xvar_name), y=1, ha="right")
         ax.legend()
+        plt.savefig("{}{}.png".format(save_dir, xvar_name))
 
         return fig

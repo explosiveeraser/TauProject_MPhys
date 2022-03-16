@@ -38,6 +38,7 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm, trange
 import root_numpy as rn
 from root_numpy import tree2array
+from Weighted_Array import weight_array
 
 
 
@@ -195,16 +196,17 @@ class RNN_Data():
     # TOWER_ARRAY: ['[index]',[E], [ET], [Eta], [Phi], [Edges0], [Edges1], [Edges2], [Edges3], [Eem], [Ehad], [T],
     # [deltaEta], [deltaPhi], [deltaR]]
 
-    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
+    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section, density=True, multiplier=1.):
         # Binning
-        bin_edges = np.percentile(bkg_pt, np.linspace(0.0, 100.0, 50))
+        bck_weighted = bkg_pt
+        bin_edges = np.percentile(bck_weighted, np.linspace(0.0, 100.0, 50))
         print(bin_edges)
         bin_edges[0] = 20.0  # 20 GeV lower limit
         bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         #print(bin_edges)
         # Reweighting coefficient
-        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=False, weights=sig_cross_section)
-        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=False, weights=bck_cross_section)
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=density, weights=sig_cross_section)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=density, weights=bck_cross_section)
 
         coeff = sig_hist / bkg_hist
         #print(len(coeff))
@@ -216,7 +218,7 @@ class RNN_Data():
         print("sig_weights {}".format(len(sig_weight)))
         print("bkg_weights {}".format(len(bkg_weight)))
 
-        return sig_weight, bkg_weight
+        return sig_weight, bkg_weight * multiplier
 
     def get_pt_weights(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section):
         pt_weights = self.pt_reweight(sig_pt, bkg_pt, sig_cross_section, bck_cross_section)
@@ -323,7 +325,7 @@ class RNN_Data():
             temp = [jet_dict["untrans_jet_PT"][idx], jet_dict["jet_PT"][idx], jet_dict["jet_PT_LC_scale"][idx], jet_dict["jet_f_cent"][idx],
                     jet_dict["jet_iF_leadtrack"][idx], jet_dict["jet_max_deltaR"][idx], jet_dict["jet_Ftrack_Iso"][idx],
                     jet_dict["jet_ratio_ToEem_P"][idx], jet_dict["jet_frac_trEM_pt"][idx], jet_dict["jet_mass_track_EM_system"][idx],
-                    jet_dict["jet_mass_track_system"][idx], jet_dict["jet_trans_impact_param_sig"][idx]]
+                    jet_dict["jet_mass_track_system"][idx], jet_dict["jet_trans_impact_param_sig"][idx], jet_dict["jet_Eta"][idx], jet_dict["jet_Phi"][idx]]
             jet_input.append(np.asarray(temp).astype(np.float32))
         for idx in trange(0, len(track_dict["track_PT"])):
             temp1 = []
@@ -644,7 +646,10 @@ class RNN_Data():
         for s_tree in sigtree:
             s_cs = np.append(s_cs, tree2array(s_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0) * 0.00319
         s_cs = np.ones_like(s_cs)
-        #b_cs = np.ones_like(b_cs)
+        b_cs = np.ones_like(b_cs)
+        multiplier = len(b_cs)/len(s_cs)
+        multiplier = 1.
+        #b_cs /= 250000.
         cross_section = np.append(b_cs, s_cs).astype(np.float32)
         # b_sel = np.array([])
         # s_sel = np.array([])
@@ -657,7 +662,7 @@ class RNN_Data():
         #cross_section = np.ones_like(cross_section)
         for jet_var in tqdm([ "jet_TruthTau", "jet_PT", "jet_PT_LC_scale", "jet_f_cent", "jet_iF_leadtrack", "jet_max_deltaR",
                          "jet_Ftrack_Iso", "jet_ratio_ToEem_P", "jet_frac_trEM_pt", "jet_mass_track_EM_system",
-                              "jet_mass_track_system", "jet_trans_impact_param_sig", "nTrack", "nTower", "mu"]):
+                              "jet_mass_track_system", "jet_trans_impact_param_sig", "nTrack", "nTower", "rho_0", "jet_Eta", "jet_Phi"]):
             if jet_var != "jet_TruthTau":
                 backjet = np.array([])
                 sigjet = np.array([])
@@ -671,7 +676,7 @@ class RNN_Data():
                     max_nTrack = int(np.amax(jet["nTrack"]))
                 if jet_var == "nTower":
                     max_nTower = int(np.max(jet["nTower"]))
-                if jet_var == "mu":
+                if jet_var == "rho_0":
                     self.mu = np.append(backjet, sigjet, axis=0).astype(np.float32)
                 #if jet_var in ["jet_deltaEta", "jet_deltaPhi"]:
                  #   jet[jet_var] = self.abs_var(jet[jet_var])
@@ -682,7 +687,7 @@ class RNN_Data():
                             self.bck_pt = backjet
                             s_cs = s_cs
                             b_cs = b_cs
-                            sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs)
+                            sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs, multiplier=multiplier)
                             self.pt_weights = np.append(bck_pt_w, sig_pt_w, axis=0)
                             self.new_weights = cross_section * self.pt_weights
                             #self.new_weights = self.pt_weights

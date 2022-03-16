@@ -106,8 +106,9 @@ class Background(Dataset):
                 event_mu = len(self._branchReader["Vertex"])
                 pileup_particles = []
                 num_rho = self._branchReader["Rho"].GetEntries()
-                for idx in range(0, num_rho):
-                    event_rho = self._branchReader["Rho"].At(idx).Rho
+                event_rho0 = self._branchReader["Rho"].At(0).Rho
+                event_rho1 = self._branchReader["Rho"].At(1).Rho
+                event_rho2 = self._branchReader["Rho"].At(2).Rho
             else:
                 event_mu = 1
             num_tracks = self._branchReader["Track"].GetEntries()
@@ -142,7 +143,7 @@ class Background(Dataset):
 
                     self.num_of_object["Jet"] += 1
                     # new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents, hists=print_hist)
-                    new_jet = Jet_(entry, idx, evt, weight, event_mu, event_rho, jet, None, particles, tracks, towers, None, hists=print_hist)
+                    new_jet = Jet_(entry, idx, evt, weight, event_mu, [event_rho0, event_rho1, event_rho2], jet, None, particles, tracks, towers, None, hists=print_hist)
                     self.JetArray.append(new_jet)
                     if print_hist:
                         self.Fill_Histograms("Jet", jet, weight, new_jet)
@@ -181,6 +182,8 @@ class Background(Dataset):
             jet_index = array('i', [0])
             jet_cross_section = array('f', [0.])
             jet_PT = array('f', [0.])
+            jet_Eta = array('f', [0.])
+            jet_Phi = array('f', [0.])
             jet_PT_LC_scale = array('f', [0.])
             jet_f_cent = array('f', [0.])
             jet_iF_leadtrack = array('f', [0.])
@@ -193,6 +196,9 @@ class Background(Dataset):
             jet_trans_impact_param_sig = array('f', [0.])
             jet_TruthTau = array('i', [0])
             mu = array('f', [0.])
+            rho_0 = array('f', [0.])
+            rho_1 = array('f', [0.])
+            rho_2 = array('f', [0.])
             nTrack = array('i', [0])
             nTower = array('i', [0])
             track_entry = array('i', MaxNtrack * [0])
@@ -218,6 +224,8 @@ class Background(Dataset):
             tree.Branch("jet_index", jet_index, "jet_index/I")
             tree.Branch("jet_cross_section", jet_cross_section, "jet_cross_section/F")
             tree.Branch("jet_PT", jet_PT, "jet_PT/F")
+            tree.Branch("jet_Eta", jet_Eta, "jet_Eta/F")
+            tree.Branch("jet_Phi", jet_Phi, "jet_Phi/F")
             tree.Branch("jet_PT_LC_scale", jet_PT_LC_scale, "jet_PT_LC_scale/F")
             tree.Branch("jet_f_cent", jet_f_cent, "jet_f_cent/F")
             tree.Branch("jet_iF_leadtrack", jet_iF_leadtrack, "jet_iF_leadtrack/F")
@@ -229,6 +237,9 @@ class Background(Dataset):
             tree.Branch("jet_mass_track_system", jet_mass_track_system, "jet_mass_track_system/F")
             tree.Branch("jet_trans_impact_param_sig", jet_trans_impact_param_sig, 'jet_trans_impact_param_sig/F')
             tree.Branch("mu", mu, "mu/F")
+            tree.Branch("rho_0", rho_0, "rho_0/F")
+            tree.Branch("rho_1", rho_1, "rho_1/F")
+            tree.Branch("rho_2", rho_2, "rho_2/F")
             tree.Branch("nTrack", nTrack, "nTrack/I")
             tree.Branch("nTower", nTower, "nTower/I")
             tree.Branch("track_entry", track_entry, "track_entry[nTrack]/I")
@@ -256,6 +267,8 @@ class Background(Dataset):
                     jet_index[0] = int(jet.idx)
                     jet_cross_section[0] = jet.cross_section
                     jet_PT[0] = jet.PT
+                    jet_Eta[0] = jet.Eta
+                    jet_Phi[0] = jet.Phi
                     jet_PT_LC_scale[0] = jet.pt_lc_scale
                     jet_f_cent[0] = jet.f_cent
                     jet_iF_leadtrack[0] = jet.iF_leadtrack
@@ -268,6 +281,9 @@ class Background(Dataset):
                     jet_trans_impact_param_sig[0] = jet.max_trans_impact_param
                     jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     mu[0] = jet.mu
+                    rho_0[0] = jet.rho[0]
+                    rho_1[0] = jet.rho[1]
+                    rho_2[0] = jet.rho[2]
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
                     nTrack[0] = n_tr

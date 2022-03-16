@@ -206,13 +206,14 @@ class Plots():
 
         return eff, ratio
 
-    def plot_rej_vs_eff(self):
+    def plot_rej_vs_eff(self, name, save_dir):
         eff, rej = self.roc(self.real_y, self.pred_y, sample_weight=self.weights)
         #eff, rej = self.roc(self.real_y, self.pred_y)
         self.eff = eff
         self.rej = rej
         fig, ax = plt.subplots()
         ax.plot(eff, rej, color='g', label='Delphes Tau RNN')
+        plt.imread("note_roc_curve.png")
         #ax.set_ylim(self.ylim)
         ax.set_xlim((0., 1.))
         ax.set_ylim((1., 1e4))
@@ -221,6 +222,7 @@ class Plots():
         ax.set_ylabel("Background rejection", y=1, ha="right")
         if self.legend:
             ax.legend()
+        plt.savefig("{}{}.png".format(save_dir, name))
         return fig
 
     #Copied from Original RNN Project

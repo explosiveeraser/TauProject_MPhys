@@ -21,6 +21,10 @@ class DataProcessing():
     def __init__(self, SigDir, BackDir, Sig_wPU, back_wPU, print_hists=True):
 
         #PileUp Processed
+
+        self.signal_wPU = Signal(Sig_wPU, print_hist=False, pile_up=True)
+        self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
+
         if isinstance(back_wPU, list):
             i = 0
             for tree in back_wPU:
@@ -58,9 +62,6 @@ class DataProcessing():
             background_wPU.write_taucan_ttree("background_wPU_tree")
             del background_wPU
 
-
-        self.signal_wPU = Signal(Sig_wPU, print_hist=False, pile_up=True)
-        self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
 
         Prong1 = 0
         Prong3 = 0

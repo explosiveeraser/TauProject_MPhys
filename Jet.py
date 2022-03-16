@@ -90,7 +90,7 @@ class Jet_():
         deltaEta = self.Eta - con_eta
         deltaPhi = self.Phi - con_phi
         deltaR = math.sqrt((deltaEta)**2+(deltaPhi)**2)
-        if deltaR <= self.DR:
+        if deltaR <= 0.4:
             return True
         else:
             return False

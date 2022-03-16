@@ -93,11 +93,11 @@ class Signal(Dataset):
             if pile_up:
                 self._branchReader["Vertex"].GetEntries()
                 event_mu = len(self._branchReader["Vertex"])
-                num_rho = self._branchReader["Rho"].GetEntries()
-                for idx in range(0, num_rho):
-                    event_rho = self._branchReader["Rho"].Rho
-                    print(event_rho)
                 pileup_particles = []
+                num_rho = self._branchReader["Rho"].GetEntries()
+                event_rho0 = self._branchReader["Rho"].At(0).Rho
+                event_rho1 = self._branchReader["Rho"].At(1).Rho
+                event_rho2 = self._branchReader["Rho"].At(2).Rho
             else:
                 event_mu = 1
             num_tracks = self._branchReader["Track"].GetEntries()
@@ -131,7 +131,7 @@ class Signal(Dataset):
                 ##
                     self.num_of_object["Jet"] += 1
                     # new_jet = Jet_(entry, idx, evt, weight, jet, jet.Particles, particles, tracks, towers, jet.Constituents)
-                    new_jet = Jet_(entry, idx, evt, weight, event_mu, event_rho, jet, None, particles, tracks, towers, None, hists=print_hist)
+                    new_jet = Jet_(entry, idx, evt, weight, event_mu, [event_rho0, event_rho1, event_rho2], jet, None, particles, tracks, towers, None, hists=print_hist)
                     self.JetArray.append(new_jet)
                     if print_hist:
                         self.Fill_Histograms("Jet", jet, weight, new_jet)
@@ -185,6 +185,9 @@ class Signal(Dataset):
             jet_TruthTau = array('i', [0])
             jet_delphesTauTag = array('i', [0])
             mu = array('f', [0.])
+            rho_0 = array('f', [0.])
+            rho_1 = array('f', [0.])
+            rho_2 = array('f', [0.])
             nTrack = array('i', [0])
             nTower = array('i', [0])
             track_entry = array('i', MaxNtrack * [0])
@@ -223,6 +226,9 @@ class Signal(Dataset):
             tree.Branch("jet_mass_track_system", jet_mass_track_system, "jet_mass_track_system/F")
             tree.Branch("jet_trans_impact_param_sig", jet_trans_impact_param_sig, 'jet_trans_impact_param_sig/F')
             tree.Branch("mu", mu, "mu/F")
+            tree.Branch("rho_0", rho_0, "rho_0/F")
+            tree.Branch("rho_1", rho_1, "rho_1/F")
+            tree.Branch("rho_2", rho_2, "rho_2/F")
             tree.Branch("nTrack", nTrack, "nTrack/I")
             tree.Branch("nTower", nTower, "nTower/I")
             tree.Branch("track_entry", track_entry, "track_entry[nTrack]/I")
@@ -273,6 +279,9 @@ class Signal(Dataset):
                     jet_TruthTau[0] = jet.TruthTau[prong].__int__()
                     jet_delphesTauTag[0] = jet.delphes_TauTag.__int__()
                     mu[0] = jet.mu
+                    rho_0[0] = jet.rho[0]
+                    rho_1[0] = jet.rho[1]
+                    rho_2[0] = jet.rho[2]
                     n_tr = len(jet.Tracks)
                     n_to = len(jet.Towers)
                     nTrack[0] = n_tr
