@@ -320,13 +320,14 @@ class FlattenerEfficiencyPlot(Plot):
 
 
 class EfficiencyPlot(Plot):
-    def __init__(self, eff, bins=10, scale=1.0, label=None,
+    def __init__(self, eff, colors, bins=10, scale=1.0, label=None,
                  ylim=None):
         super(EfficiencyPlot, self).__init__()
 
         self.label = label
 
         self.eff = eff
+        self.colors = colors
         self.bins = bins / scale
         self.scale = scale
         self.ylim = ylim
@@ -335,15 +336,20 @@ class EfficiencyPlot(Plot):
     def plot(self, sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
              sig_test_mu, xvar_name, xvar, xvar_weight, save_dir):
 
+        flat = []
+        pass_thr = []
+        efficiencies = []
+
         # Determine flattening on training sample for all scores
-        flat = Flattener(pt_bins, mu_bins, self.eff)
-        flat.fit(sig_train_pt, sig_train_mu, sig_train_score)
+        for idx in range(0, len(self.eff)):
+            flat.append(Flattener(pt_bins, mu_bins, self.eff[idx]))
+            flat[idx].fit(sig_train_pt, sig_train_mu, sig_train_score)
 
         # Check which events pass the working point for each score
-        pass_thr = flat.passes_thr(sig_test_pt, sig_test_mu, sig_test_score)
+            pass_thr.append(flat[idx].passes_thr(sig_test_pt, sig_test_mu, sig_test_score))
 
-        efficiencies = binned_efficiency_ci(xvar, pass_thr,
-                                            bins=self.bins, weight=xvar_weight)
+            efficiencies.append(binned_efficiency_ci(xvar, pass_thr[idx],
+                                            bins=self.bins, weight=xvar_weight, nbootstrap=200))
 
         print(efficiencies)
 
@@ -353,25 +359,27 @@ class EfficiencyPlot(Plot):
         bin_center = self.scale * (self.bins[1:] + self.bins[:-1]) / 2.0
         bin_half_width = self.scale * (self.bins[1:] - self.bins[:-1]) / 2.0
         if self.label != None:
-            for z, (eff, c, label) in enumerate(
-                    zip(efficiencies, colorseq, self.label)):
-                ci_lo, ci_hi = eff.ci
-                yerr = np.vstack([eff.median - ci_lo, ci_hi - eff.median])
-                ax.errorbar(bin_center, eff.median,
-                            xerr=bin_half_width,
-                            yerr=yerr,
-                            fmt="o", color=c, label=label, zorder=z)
+            for idx in range(0, len(self.eff)):
+                for z, (eff, c, label) in enumerate(
+                        zip(efficiencies[idx], colorseq, self.label)):
+                    ci_lo, ci_hi = eff.ci
+                    yerr = np.vstack([eff.median - ci_lo, ci_hi - eff.median])
+                    ax.errorbar(bin_center, eff.median,
+                                xerr=bin_half_width,
+                                yerr=yerr,
+                                fmt="o", color=colors[self.colors[idx]], label=label, zorder=z)
 
         else:
-            for z, (eff, c) in enumerate(
-                    zip(efficiencies, colorseq)):
-                ci_lo, ci_hi = eff.ci
-                yerr = np.vstack([eff.median - ci_lo, ci_hi - eff.median])
+            for idx in range(0, len(self.eff)):
+                for z, (eff, c) in enumerate(
+                        zip(efficiencies[idx], colorseq)):
+                    ci_lo, ci_hi = eff.ci
+                    yerr = np.vstack([eff.median - ci_lo, ci_hi - eff.median])
 
-                ax.errorbar(bin_center, eff.median,
-                            xerr=bin_half_width,
-                            yerr=yerr,
-                            fmt="o", color=c, zorder=z)
+                    ax.errorbar(bin_center, eff.median,
+                                xerr=bin_half_width,
+                                yerr=yerr,
+                                fmt="o", color=colors[self.colors[idx]], label="Working point: {}".format(self.eff[idx]), zorder=z)
 
         if self.ylim:
             ax.set_ylim(self.ylim)
@@ -389,13 +397,14 @@ class EfficiencyPlot(Plot):
 
 
 class RejectionPlot(Plot):
-    def __init__(self,eff, bins=10, scale=1.0, label=None,
+    def __init__(self,eff, colors, bins=10, scale=1.0, label=None,
                  ylim=None):
         super(RejectionPlot, self).__init__()
 
         self.label = label
 
         self.eff = eff
+        self.colors = colors
         self.bins = bins / scale
         self.scale = scale
         self.ylim = ylim
@@ -404,15 +413,20 @@ class RejectionPlot(Plot):
     def plot(self, sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
              bkg_test_pt, bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, xvar_name, save_dir):
 
-        flat = Flattener(pt_bins, mu_bins, self.eff)
-        flat.fit(sig_train_pt, sig_train_mu, sig_train_score)
+        flat = []
+        pass_thr = []
+        rejections = []
 
-        # Check which events pass the working point for each score
-        pass_thr = flat.passes_thr(bkg_test_pt, bkg_test_mu, bkg_test_score)
+        for idx in range(0, len(self.eff)):
+            flat.append(Flattener(pt_bins, mu_bins, self.eff[idx]))
+            flat[idx].fit(sig_train_pt, sig_train_mu, sig_train_score)
 
-        rejections = binned_efficiency_ci(bkg_test_xvar, pass_thr,
+            # Check which events pass the working point for each score
+            pass_thr.append(flat[idx].passes_thr(bkg_test_pt, bkg_test_mu, bkg_test_score))
+
+            rejections.append(binned_efficiency_ci(bkg_test_xvar, pass_thr[idx],
                                           weight=bkg_test_weight,
-                                          bins=self.bins, return_inverse=True)
+                                          bins=self.bins, return_inverse=True, nbootstrap=200))
 
         print(rejections)
 
@@ -422,25 +436,29 @@ class RejectionPlot(Plot):
         bin_center = self.scale * (self.bins[1:] + self.bins[:-1]) / 2.0
         bin_half_width = self.scale * (self.bins[1:] - self.bins[:-1]) / 2.0
 
-        if self.label != None:
-            for z, (rej, c, label) in enumerate(
-                    zip(rejections, colorseq, self.label)):
-                ci_lo, ci_hi = rej.ci
-                yerr = np.vstack([rej.median - ci_lo, ci_hi - rej.median])
-                ax.errorbar(bin_center, rej.median,
-                            xerr=bin_half_width,
-                            yerr=yerr,
-                            fmt="o", color=c, label=label, zorder=z)
-        else:
-            for z, (rej, c) in enumerate(
-                    zip(rejections, colorseq)):
-                ci_lo, ci_hi = rej.ci
-                yerr = np.vstack([rej.median - ci_lo, ci_hi - rej.median])
 
-                ax.errorbar(bin_center, rej.median,
-                            xerr=bin_half_width,
-                            yerr=yerr,
-                           fmt="o", color=c, zorder=z)
+
+        if self.label != None:
+            for idx in range(0, len(self.eff)):
+                for z, (rej, c, label) in enumerate(
+                        zip(rejections[idx], colorseq, self.label)):
+                    ci_lo, ci_hi = rej.ci
+                    yerr = np.vstack([rej.median - ci_lo, ci_hi - rej.median])
+                    ax.errorbar(bin_center, rej.median,
+                                xerr=bin_half_width,
+                                yerr=yerr,
+                                fmt="o", color=colors[self.colors[idx]], label=label, zorder=z)
+        else:
+            for idx in range(0, len(self.eff)):
+                for z, (rej, c) in enumerate(
+                        zip(rejections[idx], colorseq)):
+                    ci_lo, ci_hi = rej.ci
+                    yerr = np.vstack([rej.median - ci_lo, ci_hi - rej.median])
+
+                    ax.errorbar(bin_center, rej.median,
+                                xerr=bin_half_width,
+                                yerr=yerr,
+                               fmt="o", color=colors[self.colors[idx]], label="Working point: {}".format(self.eff[idx]), zorder=z)
 
         if self.ylim:
             ax.set_ylim(self.ylim)

@@ -644,9 +644,11 @@ class RNN_Data():
         for b_tree in backtree:
             b_cs = np.append(b_cs, tree2array(b_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0)
         for s_tree in sigtree:
-            s_cs = np.append(s_cs, tree2array(s_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0) * 0.00319
-        s_cs = np.ones_like(s_cs)
-        b_cs = np.ones_like(b_cs)
+            s_cs = np.append(s_cs, tree2array(s_tree, branches=["jet_cross_section"]).astype(np.float32), axis=0)
+        s_cs /= 0.5
+        b_cs /= 50000.
+        #s_cs = np.ones_like(s_cs)
+        #b_cs = np.ones_like(b_cs)
         multiplier = len(b_cs)/len(s_cs)
         multiplier = 1.
         #b_cs /= 250000.

@@ -194,7 +194,7 @@ else:
     from ATLAS_RNN_Plots import ScorePlot, FlattenerCutmapPlot, FlattenerEfficiencyPlot, EfficiencyPlot, RejectionPlot
 
 
-DataP1 = RNN_Data(1, True, "prong1_data", print_hists=False,
+DataP1 = RNN_Data(1, False, "prong1_data", print_hists=False,
                   BacktreeFile=["0_background_wPU_tree_1-Prong", "1_background_wPU_tree_1-Prong", "2_background_wPU_tree_1-Prong", "3_background_wPU_tree_1-Prong", "4_background_wPU_tree_1-Prong"]
                 , BackTreeName=["0_background_wPU_tree", "1_background_wPU_tree", "2_background_wPU_tree", "3_background_wPU_tree", "4_background_wPU_tree"]
                   , SignaltreeFile=["signal_wPU_tree_1-Prong"], SignalTreeName=["signal_wPU_tree"], BackendPartOfTree="", SignalendPartOfTree="")
@@ -202,6 +202,7 @@ DataP1 = RNN_Data(1, True, "prong1_data", print_hists=False,
 #print_hist = True
 
 do_RNN = False
+prong3 = True
 
 #if print_hist:
 
@@ -238,7 +239,7 @@ if do_RNN:
     eval_b_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "b"]
     plt_2hist("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
 
-    plt.show()
+    #plt.show()
 
     sig_pt = DataP1.sig_pt
     bck_pt = DataP1.bck_pt
@@ -338,52 +339,54 @@ if do_RNN:
         stest_bins_mu = np.linspace(0, 70, 9)
         btest_bins_mu = np.linspace(0, 70, 9)
 
-        stest_bins_eta = np.linspace(-2.5, 2.5, 21)
-        btest_bins_eta = np.linspace(-2.5, 2.5, 21)
+        stest_bins_eta = np.linspace(0, 2.5, 12)
+        btest_bins_eta = np.linspace(0, 2.5, 12)
         sig_test_eta = Prong1Model.eval_kinematic_vars["jet_Eta"][Prong1Model.eval_sigbck_index == "s"]
         bck_test_eta = Prong1Model.eval_kinematic_vars["jet_Eta"][Prong1Model.eval_sigbck_index == "b"]
 
-        stest_bins_phi = np.linspace(-np.pi, np.pi, 21)
-        btest_bins_phi = np.linspace(-np.pi, np.pi, 21)
+        stest_bins_phi = np.linspace(0, np.pi, 12)
+        btest_bins_phi = np.linspace(0, np.pi, 12)
         sig_test_phi = Prong1Model.eval_kinematic_vars["jet_Phi"][Prong1Model.eval_sigbck_index == "s"]
         bck_test_phi = Prong1Model.eval_kinematic_vars["jet_Phi"][Prong1Model.eval_sigbck_index == "b"]
 
-        efficiency = [95, 85, 75, 60, 45]
-        for eff in efficiency:
-            pt_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_pt)
-            pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "Jet_PT_eff{}".format(eff),
-                                        sig_test_xvar, sig_test_weight, "efficiencies/")
-            pt_rejection = RejectionPlot(eff / 100, bins=btest_bins_pt)
-            pt_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight, bkg_test_pt,
-                                                 bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "Jet_PT_eff{}".format(eff), "rejection/")
+        #efficiency = [95, 85, 75, 60, 45]
+        eff = [0.95, 0.85, 0.75, 0.60, 0.45]
+        colours = ["red", "blue", "green", "violet", "yellow"]
+       # for eff in efficiency:
+        pt_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_pt)
+        pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "1prong_Jet_PT_eff",
+                                    sig_test_xvar, sig_test_weight, "efficiencies/")
+        pt_rejection = RejectionPlot(eff , colours, bins=btest_bins_pt)
+        pt_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight, bkg_test_pt,
+                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "1prong_Jet_PT_rej", "rejection/")
 
-            mu_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_mu)
-            mu_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                             sig_test_mu, "Mu_eff{}".format(eff),
-                                             sig_test_mu, sig_test_weight, "efficiencies/")
-            mu_rejection = RejectionPlot(eff / 100, bins=btest_bins_mu)
-            mu_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-                                            bkg_test_pt,
-                                            bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_mu,
-                                            "Mu_eff{}".format(eff), "rejection/")
-            eta_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_eta)
-            eta_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                             sig_test_mu, "jet_Eta_eff{}".format(eff),
-                                             sig_test_eta, sig_test_weight, "efficiencies/")
-            eta_rejection = RejectionPlot(eff / 100, bins=btest_bins_eta)
-            eta_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-                                            bkg_test_pt,
-                                            bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_eta,
-                                            "jet_Eta_eff{}".format(eff), "rejection/")
-            phi_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_phi)
-            phi_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                              sig_test_mu, "jet_Phi_eff{}".format(eff),
-                                              sig_test_phi, sig_test_weight, "efficiencies/")
-            phi_rejection = RejectionPlot(eff / 100, bins=btest_bins_phi)
-            phi_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-                                             bkg_test_pt,
-                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_phi,
-                                             "jet_Phi_eff{}".format(eff), "rejection/")
+        mu_efficiency = EfficiencyPlot(eff , colours, bins=stest_bins_mu)
+        mu_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+                                         sig_test_mu, "1prong_Mu_eff",
+                                         sig_test_mu, sig_test_weight, "efficiencies/")
+        mu_rejection = RejectionPlot(eff , colours, bins=btest_bins_mu)
+        mu_rej_plot = mu_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+                                        bkg_test_pt,
+                                        bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_mu,
+                                        "1prong_Mu_eff", "rejection/")
+        eta_efficiency = EfficiencyPlot(eff , colours, bins=stest_bins_eta)
+        eta_eff_plot = eta_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+                                         sig_test_mu, "1prong_jet_Eta_eff",
+                                         np.abs(sig_test_eta), sig_test_weight, "efficiencies/")
+        eta_rejection = RejectionPlot(eff , colours, bins=btest_bins_eta)
+        eta_rej_plot = eta_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+                                        bkg_test_pt,
+                                        bkg_test_weight, bkg_test_score, bkg_test_mu, np.abs(bck_test_eta),
+                                        "1prong_jet_Eta_rej", "rejection/")
+        phi_efficiency = EfficiencyPlot(eff , colours, bins=stest_bins_phi)
+        phi_eff_plot = phi_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+                                          sig_test_mu, "1prong_jet_Phi_eff",
+                                          np.abs(sig_test_phi), sig_test_weight, "efficiencies/")
+        phi_rejection = RejectionPlot(eff , colours, bins=btest_bins_phi)
+        phi_rej_plot = phi_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+                                         bkg_test_pt,
+                                         bkg_test_weight, bkg_test_score, bkg_test_mu, np.abs(bck_test_phi),
+                                         "1prong_jet_Phi_rej", "rejection/")
         #plt.show()
         input("enter...")
     else:
@@ -406,7 +409,7 @@ if do_RNN:
         plt.show()
 
 ######################################
-else:
+if prong3:
     DataP3 = RNN_Data(1, False, "prong3_data", print_hists=False,
                       BacktreeFile=["0_background_wPU_tree_3-Prong", "1_background_wPU_tree_3-Prong",
                                     "2_background_wPU_tree_3-Prong", "3_background_wPU_tree_3-Prong",
@@ -464,7 +467,7 @@ else:
 
     plot_2_histogram("new_weights_3Prong", sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
 
-    Prong3Model.Model_Fit(256, 100, 0.1, model=Prong3Model.RNNmodel, inputs=Prong3Model.inputs)
+    Prong3Model.Model_Fit(128, 100, 0.1, model=Prong3Model.RNNmodel, inputs=Prong3Model.inputs)
 
     train_real_y, train_pred_y = Prong3Model.get_train_scores(Prong3Model.RNNmodel, Prong3Model.inputs)
     train_weights = Prong3Model.w_train
@@ -475,18 +478,18 @@ else:
 
     back_real_y, back_pred_y, back_jet_pt = Prong3Model.predict_back(Prong3Model.RNNmodel, Prong3Model.eval_back_inputs)
 
-    Prong1Plots = Plots("Prong3Plots", real_y, pred_y, Prong3Model.eval_w, train_real_y, train_pred_y, train_weights,
+    Prong3Plots = Plots("Prong3Plots", real_y, pred_y, Prong3Model.eval_w, train_real_y, train_pred_y, train_weights,
                         jet_pt)
 
     back_plots = Plots("P3_backplots", back_real_y, back_pred_y, Prong3Model.eval_back_w, train_real_y, train_pred_y,
                        train_weights, back_jet_pt)
 
-    Prong1Plots.plot_raw_score_vs_jetPT()
-    Prong1Plots.histogram_RNN_score()
+    Prong3Plots.plot_raw_score_vs_jetPT()
+    Prong3Plots.histogram_RNN_score()
 
     back_plots.histogram_RNN_score()
 
-    prong1_rejveff = Prong1Plots.plot_rej_vs_eff("ROC_Prong3", "ROC_curves/")
+    prong3_rejveff = Prong3Plots.plot_rej_vs_eff("ROC_Prong3", "ROC_curves/")
 
     plt.draw()
     plt.show()
@@ -555,55 +558,56 @@ else:
         stest_bins_mu = np.linspace(0, 70, 9)
         btest_bins_mu = np.linspace(0, 70, 9)
 
-        stest_bins_eta = np.linspace(-2.5, 2.5, 21)
-        btest_bins_eta = np.linspace(-2.5, 2.5, 21)
+        stest_bins_eta = np.linspace(0, 2.5, 12)
+        btest_bins_eta = np.linspace(0, 2.5, 12)
         sig_test_eta = Prong3Model.eval_kinematic_vars["jet_Eta"][Prong3Model.eval_sigbck_index == "s"]
         bck_test_eta = Prong3Model.eval_kinematic_vars["jet_Eta"][Prong3Model.eval_sigbck_index == "b"]
 
-        stest_bins_phi = np.linspace(-np.pi, np.pi, 21)
-        btest_bins_phi = np.linspace(-np.pi, np.pi, 21)
+        stest_bins_phi = np.linspace(0, np.pi, 12)
+        btest_bins_phi = np.linspace(0, np.pi, 12)
         sig_test_phi = Prong3Model.eval_kinematic_vars["jet_Phi"][Prong3Model.eval_sigbck_index == "s"]
         bck_test_phi = Prong3Model.eval_kinematic_vars["jet_Phi"][Prong3Model.eval_sigbck_index == "b"]
 
-        efficiency = [95, 85, 75, 60, 45]
-        for eff in efficiency:
-            pt_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_pt)
-            pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                             sig_test_mu, "Prong3_Jet_PT_eff{}".format(eff),
-                                             sig_test_xvar, sig_test_weight, "efficiencies/")
-            pt_rejection = RejectionPlot(eff / 100, bins=btest_bins_pt)
-            pt_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-                                            bkg_test_pt,
-                                            bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar,
-                                            "Prong3_Jet_PT_eff{}".format(eff), "rejection/")
+        eff = [0.95, 0.85, 0.75, 0.60, 0.45]
+        colours = ["red", "blue", "green", "violet", "yellow"]
+        # for eff in efficiency:
+        pt_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_pt)
+        pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+                                         sig_test_mu, "3prong_Jet_PT_eff",
+                                         sig_test_xvar, sig_test_weight, "efficiencies/")
+        pt_rejection = RejectionPlot(eff, colours, bins=btest_bins_pt, ylim=(0, 600))
+        pt_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+                                        bkg_test_pt,
+                                        bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar,
+                                        "3prong_Jet_PT_rej", "rejection/")
 
-            mu_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_mu)
-            mu_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                             sig_test_mu, "Prong3_Mu_eff{}".format(eff),
-                                             sig_test_mu, sig_test_weight, "efficiencies/")
-            mu_rejection = RejectionPlot(eff / 100, bins=btest_bins_mu)
-            mu_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-                                            bkg_test_pt,
-                                            bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_mu,
-                                            "Prong3_Mu_eff{}".format(eff), "rejection/")
-            eta_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_eta)
-            eta_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                              sig_test_mu, "Prong3_jet_Eta_eff{}".format(eff),
-                                              sig_test_eta, sig_test_weight, "efficiencies/")
-            eta_rejection = RejectionPlot(eff / 100, bins=btest_bins_eta)
-            eta_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-                                             bkg_test_pt,
-                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_eta,
-                                             "Prong3_jet_Eta_eff{}".format(eff), "rejection/")
-            phi_efficiency = EfficiencyPlot(eff / 100, bins=stest_bins_phi)
-            phi_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                              sig_test_mu, "Prong3_jet_Phi_eff{}".format(eff),
-                                              sig_test_phi, sig_test_weight, "efficiencies/")
-            phi_rejection = RejectionPlot(eff / 100, bins=btest_bins_phi)
-            phi_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-                                             bkg_test_pt,
-                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_phi,
-                                             "Prong3_jet_Phi_eff{}".format(eff), "rejection/")
+        mu_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_mu)
+        mu_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+                                         sig_test_mu, "3prong_Mu_eff",
+                                         sig_test_mu, sig_test_weight, "efficiencies/")
+        mu_rejection = RejectionPlot(eff, colours, bins=btest_bins_mu, ylim=(0, 400))
+        mu_rej_plot = mu_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+                                        bkg_test_pt,
+                                        bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_mu,
+                                        "3prong_Mu_eff", "rejection/")
+        eta_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_eta)
+        eta_eff_plot = eta_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+                                           sig_test_mu, "3prong_jet_Eta_eff",
+                                           sig_test_eta, sig_test_weight, "efficiencies/")
+        eta_rejection = RejectionPlot(eff, colours, bins=btest_bins_eta, ylim=(0, 2500))
+        eta_rej_plot = eta_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+                                          bkg_test_pt,
+                                          bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_eta,
+                                          "3prong_jet_Eta_rej", "rejection/")
+        phi_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_phi)
+        phi_eff_plot = phi_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
+                                           sig_test_mu, "3prong_jet_Phi_eff",
+                                           sig_test_phi, sig_test_weight, "efficiencies/")
+        phi_rejection = RejectionPlot(eff, colours, bins=btest_bins_phi, ylim=(0, 3000))
+        phi_rej_plot = phi_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
+                                          bkg_test_pt,
+                                          bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_phi,
+                                          "3prong_jet_Phi_rej", "rejection/")
         plt.show()
         input("enter...")
     else:

@@ -159,7 +159,10 @@ def binned_efficiency_ci(x, pass_sel, weight=None, ci=68.3, nbootstrap=200,
             total_hist, _, _ = binned_statistic(x_bs, None, statistic="count",
                                                 **kwargs)
 
-      #  print(x_bs)
+        print("PASS HIST:{}".format(pass_hist))
+        print("TOTAL HIST:{}".format(total_hist))
+
+        #input("enter to proceed...")
 
         for i, pass_hist in enumerate(pass_hists):
             efficiency[i].append(pass_hist / total_hist)
