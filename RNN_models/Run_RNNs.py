@@ -195,13 +195,20 @@ else:
 
 
 DataP1 = RNN_Data(1, False, "prong1_data", print_hists=False,
-                  BacktreeFile=["0_background_wPU_tree_1-Prong", "1_background_wPU_tree_1-Prong", "2_background_wPU_tree_1-Prong", "3_background_wPU_tree_1-Prong", "4_background_wPU_tree_1-Prong"]
-                , BackTreeName=["0_background_wPU_tree", "1_background_wPU_tree", "2_background_wPU_tree", "3_background_wPU_tree", "4_background_wPU_tree"]
-                  , SignaltreeFile=["signal_wPU_tree_1-Prong"], SignalTreeName=["signal_wPU_tree"], BackendPartOfTree="", SignalendPartOfTree="")
+                  BacktreeFile=["1600pt_0-1_background_wPU_tree_1-Prong", "1600pt_1-1_background_wPU_tree_1-Prong", "1600pt_2-1_background_wPU_tree_1-Prong",
+                                "1600pt_3-1_background_wPU_tree_1-Prong", "1600pt_4-1_background_wPU_tree_1-Prong", "1600pt_0-2_background_wPU_tree_1-Prong",
+                                "1600pt_1-2_background_wPU_tree_1-Prong", "1600pt_2-2_background_wPU_tree_1-Prong", "1600pt_3-2_background_wPU_tree_1-Prong",
+                                "1600pt_4-2_background_wPU_tree_1-Prong"]
+                , BackTreeName=["1600pt_0-1_background_wPU_tree", "1600pt_1-1_background_wPU_tree", "1600pt_2-1_background_wPU_tree",
+                                "1600pt_3-1_background_wPU_tree", "1600pt_4-1_background_wPU_tree", "1600pt_0-2_background_wPU_tree",
+                                "1600pt_1-2_background_wPU_tree", "1600pt_2-2_background_wPU_tree", "1600pt_3-2_background_wPU_tree",
+                                "1600pt_4-2_background_wPU_tree"]
+                  , SignaltreeFile=["1600pt_0_signal_wPU_tree_1-Prong", "1600pt_1_signal_wPU_tree_1-Prong"],
+                  SignalTreeName=["1600pt_0_signal_wPU_tree", "1600pt_1_signal_wPU_tree"], BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 
-do_RNN = False
+do_RNN = True
 prong3 = True
 
 #if print_hist:
@@ -255,7 +262,11 @@ if do_RNN:
 
     plot_2_histogram("new_weights", sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
 
-    Prong1Model.Model_Fit(256, 100, 0.1, model=Prong1Model.RNNmodel, inputs=Prong1Model.inputs)
+    plt.show()
+
+    Prong1Model.Model_Fit(256, 100, 0.2, model=Prong1Model.RNNmodel, inputs=Prong1Model.inputs)
+    Prong1Model.plot_loss()
+
 
     train_real_y, train_pred_y = Prong1Model.get_train_scores(Prong1Model.RNNmodel, Prong1Model.inputs)
     train_weights = Prong1Model.w_train
@@ -275,7 +286,7 @@ if do_RNN:
 
     back_plots.histogram_RNN_score()
 
-    prong1_rejveff = Prong1Plots.plot_rej_vs_eff("ROC_Prong1", "ROC_curves/")
+    prong1_rejveff = Prong1Plots.plot_rej_vs_eff("ROC_Prong1", "ROC_curves/", do_train=True)
 
     plt.draw()
     plt.show()
@@ -310,7 +321,7 @@ if do_RNN:
         bkg_test_mu = Prong1Model.eval_mu[Prong1Model.eval_sigbck_index == "b"]
 
     #ATLAS Score Plot
-    rnn_score = ScorePlot(test=True, log_y=True)
+    rnn_score = ScorePlot(test=True, train=True, log_y=True)
     rnn_score.plot(sig_train_score, bkg_train_score, sig_train_weight, bkg_train_weight,
                    sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight, "Prong1", "score_plots/")
     plt.show()
@@ -332,26 +343,26 @@ if do_RNN:
         pt_min_sig = np.min(sig_test_xvar)
 
 #        stest_bins_pt = np.percentile(sig_test_xvar, np.linspace(20.0, 400.0, 16))
-        stest_bins_pt = np.linspace(20.0, 400.0, 16)
+        stest_bins_pt = np.linspace(20.0, 400.0, 38)
  #       btest_bins_pt = np.percentile(bkg_test_xvar, np.linspace(np.log10(20.), np.log10(250.0), 9))
-        btest_bins_pt = 10 ** np.linspace(np.log10(20.0), np.log10(400.0), 9)
+        btest_bins_pt = 10 ** np.linspace(np.log10(20.0), np.log10(400.0), 8)
 
-        stest_bins_mu = np.linspace(0, 70, 9)
-        btest_bins_mu = np.linspace(0, 70, 9)
+        stest_bins_mu = np.linspace(0, 70, 38)
+        btest_bins_mu = np.linspace(0, 70, 6)
 
-        stest_bins_eta = np.linspace(0, 2.5, 12)
+        stest_bins_eta = np.linspace(0, 2.5, 24)
         btest_bins_eta = np.linspace(0, 2.5, 12)
         sig_test_eta = Prong1Model.eval_kinematic_vars["jet_Eta"][Prong1Model.eval_sigbck_index == "s"]
         bck_test_eta = Prong1Model.eval_kinematic_vars["jet_Eta"][Prong1Model.eval_sigbck_index == "b"]
 
-        stest_bins_phi = np.linspace(0, np.pi, 12)
+        stest_bins_phi = np.linspace(0, np.pi, 24)
         btest_bins_phi = np.linspace(0, np.pi, 12)
         sig_test_phi = Prong1Model.eval_kinematic_vars["jet_Phi"][Prong1Model.eval_sigbck_index == "s"]
         bck_test_phi = Prong1Model.eval_kinematic_vars["jet_Phi"][Prong1Model.eval_sigbck_index == "b"]
 
         #efficiency = [95, 85, 75, 60, 45]
-        eff = [0.95, 0.85, 0.75, 0.60, 0.45]
-        colours = ["red", "blue", "green", "violet", "yellow"]
+        eff = [0.95, 0.85, 0.75, 0.60]
+        colours = ["red", "blue", "green", "violet"]
        # for eff in efficiency:
         pt_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_pt)
         pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "1prong_Jet_PT_eff",
@@ -410,16 +421,22 @@ if do_RNN:
 
 ######################################
 if prong3:
-    DataP3 = RNN_Data(1, False, "prong3_data", print_hists=False,
-                      BacktreeFile=["0_background_wPU_tree_3-Prong", "1_background_wPU_tree_3-Prong",
-                                    "2_background_wPU_tree_3-Prong", "3_background_wPU_tree_3-Prong",
-                                    "4_background_wPU_tree_3-Prong"]
-                      , BackTreeName=["0_background_wPU_tree", "1_background_wPU_tree", "2_background_wPU_tree",
-                                      "3_background_wPU_tree", "4_background_wPU_tree"]
-                      , SignaltreeFile=["signal_wPU_tree_3-Prong"], SignalTreeName=["signal_wPU_tree"],
-                      BackendPartOfTree="", SignalendPartOfTree="")
+    DataP3 = RNN_Data(3, False, "prong3_data", print_hists=False,
+                      BacktreeFile=["0-1_background_wPU_tree_3-Prong", "1-1_background_wPU_tree_3-Prong",
+                                    "2-1_background_wPU_tree_3-Prong", "3-1_background_wPU_tree_3-Prong",
+                                    "4-1_background_wPU_tree_3-Prong",
+                                    "0-2_background_wPU_tree_3-Prong", "1-2_background_wPU_tree_3-Prong",
+                                    "2-2_background_wPU_tree_3-Prong", "3-2_background_wPU_tree_3-Prong",
+                                    "4-2_background_wPU_tree_3-Prong"]
+                      , BackTreeName=["0-1_background_wPU_tree", "1-1_background_wPU_tree", "2-1_background_wPU_tree",
+                                      "3-1_background_wPU_tree", "4-1_background_wPU_tree",
+                                      "0-2_background_wPU_tree", "1-2_background_wPU_tree", "2-2_background_wPU_tree",
+                                      "3-2_background_wPU_tree", "4-2_background_wPU_tree"]
+                      , SignaltreeFile=["0_signal_wPU_tree_3-Prong", "1_signal_wPU_tree_3-Prong"],
+                      SignalTreeName=["0_signal_wPU_tree", "1_signal_wPU_tree"], BackendPartOfTree="",
+                      SignalendPartOfTree="")
 
-    Prong3Model = Tau_Model(1,
+    Prong3Model = Tau_Model(3,
                             [DataP3.input_track[:, 0:6, :], DataP3.input_tower[:, 0:10, :], DataP3.input_jet[:, 1:12]],
                             DataP3.sig_pt, DataP3.bck_pt, DataP3.jet_pt, DataP3.Ytrain, DataP3.new_weights,
                             DataP3.cross_section, DataP3.mu,
@@ -467,7 +484,9 @@ if prong3:
 
     plot_2_histogram("new_weights_3Prong", sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
 
-    Prong3Model.Model_Fit(128, 100, 0.1, model=Prong3Model.RNNmodel, inputs=Prong3Model.inputs)
+    Prong3Model.Model_Fit(256, 100, 0.2, model=Prong3Model.RNNmodel, inputs=Prong3Model.inputs)
+    Prong3Model.plot_loss()
+
 
     train_real_y, train_pred_y = Prong3Model.get_train_scores(Prong3Model.RNNmodel, Prong3Model.inputs)
     train_weights = Prong3Model.w_train
@@ -489,7 +508,7 @@ if prong3:
 
     back_plots.histogram_RNN_score()
 
-    prong3_rejveff = Prong3Plots.plot_rej_vs_eff("ROC_Prong3", "ROC_curves/")
+    prong3_rejveff = Prong3Plots.plot_rej_vs_eff("ROC_Prong3", "ROC_curves/", do_train=True)
 
     plt.draw()
     plt.show()
@@ -528,7 +547,7 @@ if prong3:
         bkg_test_mu = Prong3Model.eval_mu[Prong3Model.eval_sigbck_index == "b"]
 
     # ATLAS Score Plot
-    rnn_score = ScorePlot(test=True, log_y=True)
+    rnn_score = ScorePlot(test=True, train=True, log_y=True)
     rnn_score.plot(sig_train_score, bkg_train_score, sig_train_weight, bkg_train_weight,
                    sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight, "Prong3", "score_plots/")
     plt.show()
@@ -568,8 +587,8 @@ if prong3:
         sig_test_phi = Prong3Model.eval_kinematic_vars["jet_Phi"][Prong3Model.eval_sigbck_index == "s"]
         bck_test_phi = Prong3Model.eval_kinematic_vars["jet_Phi"][Prong3Model.eval_sigbck_index == "b"]
 
-        eff = [0.95, 0.85, 0.75, 0.60, 0.45]
-        colours = ["red", "blue", "green", "violet", "yellow"]
+        eff = [0.95, 0.75, 0.60, 0.45]
+        colours = ["red", "green", "violet", "yellow"]
         # for eff in efficiency:
         pt_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_pt)
         pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,

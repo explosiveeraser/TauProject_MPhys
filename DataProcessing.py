@@ -22,9 +22,50 @@ class DataProcessing():
 
         #PileUp Processed
 
-        self.signal_wPU = Signal(Sig_wPU, print_hist=False, pile_up=True)
-        self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
+        #Signal
+        if isinstance(Sig_wPU, list):
+            i = 0
+            for tree in Sig_wPU:
+                signal_wPU = Signal(tree, print_hist=False, pile_up=True)
+                signal_wPU.write_taucan_ttree("1600pt_{}_signal_wPU_tree".format(i))
+                i += 1
+                Prong1 = 0
+                Prong3 = 0
+                ProngN = 0
+                for jet in signal_wPU.JetArray:
+                    if jet.TruthTau["1-Prong"] == True:
+                        Prong1 += 1
+                    elif jet.TruthTau["3-Prong"] == True:
+                        Prong3 += 1
+                    elif jet.TruthTau["N>3-Prong"] == True:
+                        ProngN += 1
+                print("The number of true 1-Prong tau jets in {} is: {}".format("signal_wPU_tree", Prong1))
+                print("The number of true 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
+                                                                                Prong3))
+                print("The number of true more than 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
+                                                                                          ProngN))
+                del tree
+        else:
+            self.signal_wPU = Signal(Sig_wPU, print_hist=False, pile_up=True)
+            self.signal_wPU.write_taucan_ttree("signal_wPU_tree")
+            Prong1 = 0
+            Prong3 = 0
+            ProngN = 0
+            for jet in self.signal_wPU.JetArray:
+                if jet.TruthTau["1-Prong"] == True:
+                    Prong1 += 1
+                elif jet.TruthTau["3-Prong"] == True:
+                    Prong3 += 1
+                elif jet.TruthTau["N>3-Prong"] == True:
+                    ProngN += 1
+            print("The number of true 1-Prong tau jets in {} is: {}".format("signal_wPU_tree", Prong1))
+            print("The number of true 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
+                                                                            Prong3))
+            print("The number of true more than 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
+                                                                                      ProngN))
+            del self.signal_wPU
 
+        #Background
         if isinstance(back_wPU, list):
             i = 0
             for tree in back_wPU:
@@ -39,7 +80,12 @@ class DataProcessing():
                     background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=1805)
                 elif i == 4:
                     background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=230)
-                background_wPU.write_taucan_ttree("{}_background_wPU_tree".format(i))
+                elif i >= 5:
+                    background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=1.)
+                if i <= 4:
+                    background_wPU.write_taucan_ttree("1600pt_{}-1_background_wPU_tree".format(i))
+                elif i > 4:
+                    background_wPU.write_taucan_ttree("1600pt_{}-2_background_wPU_tree".format(i-5))
                 Prong1 = 0
                 Prong3 = 0
                 ProngN = 0
@@ -61,25 +107,6 @@ class DataProcessing():
             background_wPU = Background(back_wPU, print_hist=False)
             background_wPU.write_taucan_ttree("background_wPU_tree")
             del background_wPU
-
-
-        Prong1 = 0
-        Prong3 = 0
-        ProngN = 0
-        for jet in self.signal_wPU.JetArray:
-            if jet.TruthTau["1-Prong"] == True:
-                Prong1 += 1
-            elif jet.TruthTau["3-Prong"] == True:
-                Prong3 += 1
-            elif jet.TruthTau["N>3-Prong"] == True:
-                ProngN += 1
-        print("The number of true 1-Prong tau jets in {} is: {}".format("signal_wPU_tree", Prong1))
-        print("The number of true 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
-                                                                        Prong3))
-        print("The number of true more than 3-Prong tau jets in {} is: {}".format("signal_wPU_tree",
-                                                                                  ProngN))
-        del self.signal_wPU
-
         #None PileUp Processed
         # self.background = Background(BackDir, print_hist=False)
         # self.signal = Signal(SigDir, print_hist=False)

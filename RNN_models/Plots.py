@@ -206,13 +206,19 @@ class Plots():
 
         return eff, ratio
 
-    def plot_rej_vs_eff(self, name, save_dir):
+    def plot_rej_vs_eff(self, name, save_dir, do_train=False):
         eff, rej = self.roc(self.real_y, self.pred_y, sample_weight=self.weights)
+        if do_train:
+            eff_train, rej_train = self.roc(self.train_y, self.train_pred_y, sample_weight=self.train_weights)
+            self.eff_train = eff_train
+            self.rej_train = rej_train
         #eff, rej = self.roc(self.real_y, self.pred_y)
         self.eff = eff
         self.rej = rej
         fig, ax = plt.subplots()
-        ax.plot(eff, rej, color='g', label='Delphes Tau RNN')
+        ax.plot(eff, rej, color='g', label='Delphes Tau RNN (Evaluation Sample)')
+        if do_train:
+            ax.plot(eff_train, rej_train, color="b", label="Delphes Tau RNN (Training Sample)")
         plt.imread("note_roc_curve.png")
         #ax.set_ylim(self.ylim)
         ax.set_xlim((0., 1.))

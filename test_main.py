@@ -30,16 +30,26 @@ ROOT.gStyle.SetOptStat("ne")
 
 sig_dir = "Delphes_Signal/"
 back_dir = "Delphes_Background/"
-sig_wPU_dir = "../sdb5/Delphes_Signal_wPU/0_file/"
+a_sig_wPU_dir = "../sdb5/Delphes_Signal_wPU/0_file/"
+b_sig_wPU_dir = "../sdb5/Delphes_Signal_wPU/1_file/"
 a_back_wPU_dir = "../sdb5/Delphes_Background_wPU/0_file/"
 b_back_wPU_dir = "../sdb5/Delphes_Background_wPU/1_file/"
 c_back_wPU_dir = "../sdb5/Delphes_Background_wPU/2_file/"
 d_back_wPU_dir = "../sdb5/Delphes_Background_wPU/3_file/"
 e_back_wPU_dir = "../sdb5/Delphes_Background_wPU/4_file/"
+f_back_wPU_dir = "../sdb5/Delphes_Background_wPU/5_file/"
+g_back_wPU_dir = "../sdb5/Delphes_Background_wPU/6_file/"
+h_back_wPU_dir = "../sdb5/Delphes_Background_wPU/7_file/"
+i_back_wPU_dir = "../sdb5/Delphes_Background_wPU/8_file/"
+j_back_wPU_dir = "../sdb5/Delphes_Background_wPU/9_file/"
 
-back_wPU = [a_back_wPU_dir, b_back_wPU_dir, c_back_wPU_dir, d_back_wPU_dir, e_back_wPU_dir]
 
-Data = DataProcessing(sig_dir, back_dir, sig_wPU_dir, back_wPU)
+back_wPU = [a_back_wPU_dir, b_back_wPU_dir, c_back_wPU_dir, d_back_wPU_dir, e_back_wPU_dir,
+            f_back_wPU_dir, g_back_wPU_dir, h_back_wPU_dir, i_back_wPU_dir, j_back_wPU_dir]
+
+sig_wPU = [a_sig_wPU_dir, b_sig_wPU_dir]
+
+Data = DataProcessing(sig_dir, back_dir, sig_wPU, back_wPU)
 
 print_hists = False
 

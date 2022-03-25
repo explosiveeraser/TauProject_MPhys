@@ -25,6 +25,7 @@ from keras.utils.vis_utils import plot_model
 from keras.callbacks import EarlyStopping
 from keras.callbacks import ModelCheckpoint
 from keras.callbacks import ReduceLROnPlateau
+from keras.models import load_model
 
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.timeseries import timeseries_dataset_from_array
@@ -59,7 +60,7 @@ class Tau_Model():
         0, 10, 12, 14, 16, 18, 20, 22, 24, 50
     ]) * 2
 
-    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights, cross_sections, mu, kinematic_vars=None):
+    def __init__(self, Prongs, inputs, sig_pt, bck_pt, jet_pt, y, weights, cross_sections, mu, kinematic_vars=None, shuffle_seed=np.random.randint(1, 9999)):
         self.prong = Prongs
         self.output = TFile.Open("Prong-{}_RNN_Model.root".format(str(Prongs)), "RECREATE")
         self.track_data = inputs[0]
@@ -79,9 +80,8 @@ class Tau_Model():
         self.index_of_sig_bck = np.array(['a']*(len(bck_pt)+len(sig_pt)))
         self.index_of_sig_bck[0:end_bck_index] = 'b'
         self.index_of_sig_bck[start_sig_index:-1] = 's'
-        seed = np.random.randint(1, 9999)
-        rng = np.random.default_rng(seed)
-        np.random.seed(seed)
+        rng = np.random.default_rng(shuffle_seed)
+        np.random.seed(shuffle_seed)
         shuffled_indices = rng.permutation(len(self.y_data))
         self.track_data = self.track_data[shuffled_indices]
         self.tower_data = self.tower_data[shuffled_indices]
@@ -106,7 +106,6 @@ class Tau_Model():
         train_multiplier = len(self.train_jet_pt[self.train_sigbck_index == "b"])/len(self.train_jet_pt[self.train_sigbck_index == "s"])
         train_multiplier = 1.
         train_sig_weight, train_bck_weight = self.pt_reweight(self.train_jet_pt[self.train_sigbck_index == "s"], self.train_jet_pt[self.train_sigbck_index == "b"],
-                                        self.training_cross_sections[self.train_sigbck_index == "s"], self.training_cross_sections[self.train_sigbck_index == "b"],
                                                               multiplier=train_multiplier)
 
         self.mu_train = self.mu[int(len(self.jet_data)/2+1):-1]
@@ -124,7 +123,7 @@ class Tau_Model():
             elif self.train_sigbck_index[idx] == "b":
                 self.w_train[idx] = train_bck_weight[b_idx]
                 b_idx += 1
-        self.w_train = np.asarray(self.w_train * self.training_cross_sections).astype(np.float32)
+        self.w_train = np.asarray(self.w_train).astype(np.float32)
         #self.w_train = np.asarray(self.w_train).astype(np.float32)
         self.eval_inputs = [self.track_data[0:int(len(self.jet_data)/2+1)], self.tower_data[0:int(len(self.jet_data)/2+1)],
                             self.jet_data[0:int(len(self.jet_data)/2+1)]]
@@ -136,7 +135,6 @@ class Tau_Model():
         eval_multiplier = len(self.eval_jet_pt[self.eval_sigbck_index == "b"])/len(self.eval_jet_pt[self.eval_sigbck_index == "s"])
         eval_multiplier = 1.
         eval_sig_weight, eval_bck_weight = self.pt_reweight(self.eval_jet_pt[self.eval_sigbck_index == "s"], self.eval_jet_pt[self.eval_sigbck_index == "b"],
-                                       self.eval_cross_sections[self.eval_sigbck_index == "s"], self.eval_cross_sections[self.eval_sigbck_index == "b"],
                                                             multiplier=eval_multiplier)
         self.eval_mu = self.mu[0:int(len(self.jet_data)/2+1)]
         if kinematic_vars:
@@ -153,7 +151,7 @@ class Tau_Model():
             elif self.eval_sigbck_index[idx] == "b":
                 self.eval_w[idx] = eval_bck_weight[b_idx]
                 b_idx += 1
-        self.eval_w = np.asarray(self.eval_w * self.eval_cross_sections).astype(np.float32)
+        self.eval_w = np.asarray(self.eval_w).astype(np.float32)
         #self.eval_w = np.asarray(self.eval_w).astype(np.float32)
         t = []
         for p in tqdm(self.eval_sigbck_index):
@@ -291,22 +289,23 @@ class Tau_Model():
         self.RNNmodel = Model(inputs=[Track_input1, Tower_input1, HL_input], outputs=Output)
         self.RNNmodel.summary()
         plot_model(self.RNNmodel, to_file="RNNModel.png", show_shapes=True, show_layer_names=True)
-        #SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
-        self.RNNmodel.compile(optimizer=Adam(learning_rate=0.01), loss="binary_crossentropy",
+        sgd = SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
+        adam = Adam(learning_rate=0.01)
+        self.RNNmodel.compile(optimizer=adam, loss="binary_crossentropy",
                          metrics=['accuracy','binary_crossentropy', 'TruePositives', 'FalsePositives', "FalseNegatives", "TrueNegatives"])
 
-    def Model_Fit(self, batch_size, epochs, validation_split, model="RNNmodel", inputs="RNNmodel"):
+    def Model_Fit(self, batch_size, epochs, validation_split, model="RNNmodel", inputs="RNNmodel", addition_savename=""):
         # Setup Callbacks
         callbacks = []
 
-        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=35, verbose=1)
+        early_stopping = EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=15, verbose=1)
         callbacks.append(early_stopping)
 
         model_checkpoint = ModelCheckpoint(
-            "model.h5", monitor="val_loss", save_best_only=True, verbose=1)
+            "{}RNN_Model_Prong-{}.h5".format(addition_savename,self.prong), monitor="val_loss", save_best_only=True, verbose=1)
         callbacks.append(model_checkpoint)
 
-        reduce_lr = ReduceLROnPlateau(patience=15, verbose=1, min_lr=1e-4)
+        reduce_lr = ReduceLROnPlateau(patience=6, verbose=1, min_lr=1e-4)
         callbacks.append(reduce_lr)
         # End of setup callbacks
         if type(model) == str:
@@ -314,13 +313,18 @@ class Tau_Model():
                                              epochs=epochs, verbose=1, validation_split=validation_split, callbacks=callbacks)
 
 
-            self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
+            #self.RNNmodel.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
+            self.RNNmodel = load_model("{}RNN_Model_Prong-{}.h5".format(addition_savename,self.prong), compile=True)
             print(self.history.history.keys())
         else:
             self.history = model.fit(inputs, self.y, sample_weight=self.w_train,  batch_size=batch_size, epochs=epochs, verbose=1,
                                              validation_split=validation_split, callbacks=callbacks)
-            model.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
+            #model.save("RNN_Model_Prong-{}.h5".format(str(self.prong)))
+            self.RNNmodel = load_model("{}RNN_Model_Prong-{}.h5".format(addition_savename,self.prong), compile=True)
             print(self.history.history.keys())
+
+    def load_model(self, model_file):
+        self.RNNmodel = load_model(model_file, compile=True)
 
     def evaluate_model(self, inputs, outputs, weights, model, batch_size=256):
         results = model.evaluate(inputs, outputs, sample_weight=weights, batch_size=batch_size)
@@ -330,7 +334,7 @@ class Tau_Model():
         print("Taus Not IDed : ", results[5])
         print("Total Taus: ",results[3]+results[5])
 
-    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section, density=True, multiplier=1.):
+    def pt_reweight(self, sig_pt, bkg_pt, density=True, multiplier=1.):
         # Binning
         #sig_weighted = weight_array(sig_pt, sig_cross_section)
         bck_weighted = bkg_pt
@@ -341,8 +345,8 @@ class Tau_Model():
         bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         print(bin_edges)
         # Reweighting coefficient
-        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=density, weights=sig_cross_section)
-        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=density, weights=bck_cross_section)
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=density)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=density)
 
         coeff = sig_hist / bkg_hist
         #print(coeff)
@@ -359,9 +363,7 @@ class Tau_Model():
     def get_train_score_weights(self):
         sig = self.train_jet_pt[self.train_sigbck_index == 's']
         bck = self.train_jet_pt[self.train_sigbck_index == 'b']
-        sig_wcs = self.w_train[self.train_sigbck_index == 's']
-        bck_wcs = self.w_train[self.train_sigbck_index == 'b']
-        sig_w, bck_w = self.pt_reweight(sig, bck, sig_wcs, bck_wcs)
+        sig_w, bck_w = self.pt_reweight(sig, bck)
         new_arr = np.zeros(len(self.y))
         new_arr[self.train_sigbck_index == 's'] = sig_w
         new_arr[self.train_sigbck_index == 'b'] = bck_w
@@ -387,9 +389,7 @@ class Tau_Model():
     def get_score_weights(self):
         sig = self.eval_jet_pt[self.eval_sigbck_index == 's']
         bck = self.eval_jet_pt[self.eval_sigbck_index == 'b']
-        sig_wcs = self.eval_w[self.train_sigbck_index == 's']
-        bck_wcs = self.eval_w[self.train_sigbck_index == 'b']
-        sig_w, bck_w = self.pt_reweight(sig, bck, sig_wcs, bck_wcs)
+        sig_w, bck_w = self.pt_reweight(sig, bck)
         new_arr = np.zeros(len(self.predictions))
         new_arr[self.eval_sigbck_index == 's'] = sig_w
         new_arr[self.eval_sigbck_index == 'b'] = bck_w
@@ -402,8 +402,8 @@ class Tau_Model():
         ax1 = 0
         ax2 = 0
         print(int(math.sqrt(len(self.history.history.keys()))))
-        for key in ["val_binary_crossentropy", 'val_accuracy', 'val_true_positives', 'val_false_positives']:
-            if key not in {'true_positives', 'true_negatives', 'false_positives', 'false_negatives'}:
+        for key in ["loss", "val_binary_crossentropy", 'val_accuracy', 'val_true_positives', 'val_false_positives']:
+            if key not in {"val_binary_crossentropy", 'val_accuracy','true_positives', 'true_negatives', 'false_positives', 'false_negatives'}:
                 axis[ax1, ax2].plot(self.history.history[key])
                 axis[ax1, ax2].plot(self.history.history[key])
                 axis[ax1, ax2].set_title('model {}'.format(key))
@@ -416,6 +416,17 @@ class Tau_Model():
                     ax2 += 1
                     ax1 = 0
         plt.show()
+
+    def plot_loss(self):
+        fig, ax = plt.subplots()
+        ax.plot(self.history.history["loss"], color="b", label="Training Loss")
+        ax.plot(self.history.history["val_loss"], color="g", label="Validation Loss")
+        ax.set_title("RNN Loss vs Epochs")
+        ax.set_ylabel("Loss")
+        ax.set_xlabel("Epoch")
+        ax.legend()
+        plt.savefig("Model_Metrics/{}prong_loss_vs_epochs.png".format(self.prong))
+        return fig, self.history.history["loss"]
 
     def plot_feature_heatmap(self, features, model):
         plt.figure(figsize=(40,5))

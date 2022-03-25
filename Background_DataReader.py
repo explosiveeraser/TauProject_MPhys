@@ -137,7 +137,7 @@ class Background(Dataset):
 
                 jet = self._branchReader["Jet"].At(idx)
                 ##
-                if (jet.PT >= 20.0 and jet.PT <= 710.0) and abs(jet.Eta) <= 2.5 and abs(jet.Charge) == 1 and (
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and abs(jet.Charge) == 1 and (
                         abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52):
                 ##
 
@@ -261,7 +261,7 @@ class Background(Dataset):
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             for jet in tqdm(self.JetArray):
-                if (jet.PT >= 20.0 and jet.PT <= 710.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
+                if (jet.PT >= 20.0 and jet.PT <= 1600.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1:
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)

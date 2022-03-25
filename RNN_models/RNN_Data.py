@@ -196,7 +196,7 @@ class RNN_Data():
     # TOWER_ARRAY: ['[index]',[E], [ET], [Eta], [Phi], [Edges0], [Edges1], [Edges2], [Edges3], [Eem], [Ehad], [T],
     # [deltaEta], [deltaPhi], [deltaR]]
 
-    def pt_reweight(self, sig_pt, bkg_pt, sig_cross_section, bck_cross_section, density=True, multiplier=1.):
+    def pt_reweight(self, sig_pt, bkg_pt, density=True, multiplier=1.):
         # Binning
         bck_weighted = bkg_pt
         bin_edges = np.percentile(bck_weighted, np.linspace(0.0, 100.0, 50))
@@ -205,8 +205,8 @@ class RNN_Data():
         bin_edges[-1] = 10000.0  # 10000 GeV upper limit
         #print(bin_edges)
         # Reweighting coefficient
-        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=density, weights=sig_cross_section)
-        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=density, weights=bck_cross_section)
+        sig_hist, _ = np.histogram(sig_pt, bins=bin_edges, density=density)
+        bkg_hist, _ = np.histogram(bkg_pt, bins=bin_edges, density=density)
 
         coeff = sig_hist / bkg_hist
         #print(len(coeff))
@@ -531,7 +531,7 @@ class RNN_Data():
                 jet_canvas.Update()
                 jet_i += 1
                 jet_canvas.cd(c_i + 1)
-            jet_canvas.Print("Input_Histograms/Jet_{}.pdf".format(key))
+            jet_canvas.Print("Input_Histograms/{}Prong_Jet_{}.pdf".format(self.prong, key))
             jet_canvases.append([key, jet_canvas])
         track_i = 0
 
@@ -689,9 +689,9 @@ class RNN_Data():
                             self.bck_pt = backjet
                             s_cs = s_cs
                             b_cs = b_cs
-                            sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, s_cs, b_cs, multiplier=multiplier)
+                            sig_pt_w, bck_pt_w = self.pt_reweight(self.sig_pt, self.bck_pt, multiplier=multiplier)
                             self.pt_weights = np.append(bck_pt_w, sig_pt_w, axis=0)
-                            self.new_weights = cross_section * self.pt_weights
+                            self.new_weights = self.pt_weights
                             #self.new_weights = self.pt_weights
                             jet[jet_var] = self.log_epsilon(jet[jet_var])
                             jet["untrans_jet_PT"] = jet_untrans[jet_var]

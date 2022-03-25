@@ -126,7 +126,7 @@ class Signal(Dataset):
 
                 jet = self._branchReader["Jet"].At(idx)
                 ##
-                if (jet.PT >= 20.0 and jet.PT <= 710.0) and abs(jet.Eta) <= 2.5 and abs(jet.Charge) == 1 and (
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and abs(jet.Charge) == 1 and (
                         abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52):
                 ##
                     self.num_of_object["Jet"] += 1
@@ -253,11 +253,11 @@ class Signal(Dataset):
             num_jet_wCC = 0
             num_jet_woCC = 0
             for jet in tqdm(self.JetArray):
-                if (jet.PT >= 20.0 and jet.PT <= 710.0) and abs(jet.Eta) <= 2.5 and (
+                if (jet.PT >= 20.0 and jet.PT <= 1600.0) and abs(jet.Eta) <= 2.5 and (
                         abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1 and jet.TruthTau[prong]:
                     num_jet_woCC += 1
-                if (jet.PT >= 20.0 and jet.PT <= 710.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
+                if (jet.PT >= 20.0 and jet.PT <= 1600.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
                         jet.Towers) >= 1 and jet.TruthTau[prong]:
                     num_jet_wCC += 1
                     jet_entry[0] = int(jet.entry)
