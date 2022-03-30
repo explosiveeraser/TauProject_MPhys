@@ -101,7 +101,7 @@ def mpl_setup(scale=0.49, aspect_ratio=8.0 / 6.0,
     mpl.rcParams["lines.markersize"] = 3.0
 
 ####
-
+mpl_setup()
 
 def plot_1_histogram(name, data, weight, num_bins):
     hist_max = np.max(data)
@@ -193,18 +193,8 @@ if pile_up:
 else:
     from ATLAS_RNN_Plots import ScorePlot, FlattenerCutmapPlot, FlattenerEfficiencyPlot, EfficiencyPlot, RejectionPlot
 
+prefix = "CoreTrackCond_"
 
-DataP1 = RNN_Data(1, False, "prong1_data", print_hists=False,
-                  BacktreeFile=["1600pt_0-1_background_wPU_tree_1-Prong", "1600pt_1-1_background_wPU_tree_1-Prong", "1600pt_2-1_background_wPU_tree_1-Prong",
-                                "1600pt_3-1_background_wPU_tree_1-Prong", "1600pt_4-1_background_wPU_tree_1-Prong", "1600pt_0-2_background_wPU_tree_1-Prong",
-                                "1600pt_1-2_background_wPU_tree_1-Prong", "1600pt_2-2_background_wPU_tree_1-Prong", "1600pt_3-2_background_wPU_tree_1-Prong",
-                                "1600pt_4-2_background_wPU_tree_1-Prong"]
-                , BackTreeName=["1600pt_0-1_background_wPU_tree", "1600pt_1-1_background_wPU_tree", "1600pt_2-1_background_wPU_tree",
-                                "1600pt_3-1_background_wPU_tree", "1600pt_4-1_background_wPU_tree", "1600pt_0-2_background_wPU_tree",
-                                "1600pt_1-2_background_wPU_tree", "1600pt_2-2_background_wPU_tree", "1600pt_3-2_background_wPU_tree",
-                                "1600pt_4-2_background_wPU_tree"]
-                  , SignaltreeFile=["1600pt_0_signal_wPU_tree_1-Prong", "1600pt_1_signal_wPU_tree_1-Prong"],
-                  SignalTreeName=["1600pt_0_signal_wPU_tree", "1600pt_1_signal_wPU_tree"], BackendPartOfTree="", SignalendPartOfTree="")
 
 #print_hist = True
 
@@ -217,18 +207,46 @@ prong3 = True
 
 
 if do_RNN:
-    Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:6,:], DataP1.input_tower[:,0:10,:], DataP1.input_jet[:, 1:12]], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain, DataP1.new_weights, DataP1.cross_section, DataP1.mu, kinematic_vars={"jet_Eta" : DataP1.input_jet[:, 12], "jet_Phi" : DataP1.input_jet[:, 13]})
-    plot_2_histogram("Train_weights-Eval_weights", Prong1Model.w_train, Prong1Model.eval_w, np.ones_like(Prong1Model.w_train), np.ones_like(Prong1Model.eval_w), 70)
+
+    DataP1 = RNN_Data(1, True, "{}prong1_data".format(prefix), print_hists=False,
+                      BacktreeFile=["{}0-1_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}1-1_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}2-1_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}3-1_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}4-1_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}0-2_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}1-2_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}2-2_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}3-2_background_wPU_tree_1-Prong".format(prefix),
+                                    "{}4-2_background_wPU_tree_1-Prong".format(prefix)]
+                      , BackTreeName=["{}0-1_background_wPU_tree".format(prefix),
+                                      "{}1-1_background_wPU_tree".format(prefix),
+                                      "{}2-1_background_wPU_tree".format(prefix),
+                                      "{}3-1_background_wPU_tree".format(prefix),
+                                      "{}4-1_background_wPU_tree".format(prefix),
+                                      "{}0-2_background_wPU_tree".format(prefix),
+                                      "{}1-2_background_wPU_tree".format(prefix),
+                                      "{}2-2_background_wPU_tree".format(prefix),
+                                      "{}3-2_background_wPU_tree".format(prefix),
+                                      "{}4-2_background_wPU_tree".format(prefix)]
+                      , SignaltreeFile=["{}0_signal_wPU_tree_1-Prong".format(prefix),
+                                        "{}1_signal_wPU_tree_1-Prong".format(prefix)],
+                      SignalTreeName=["{}0_signal_wPU_tree".format(prefix), "{}1_signal_wPU_tree".format(prefix)],
+                      BackendPartOfTree="", SignalendPartOfTree="")
+
+    p1_jet_input = np.delete(DataP1.input_jet[:, 1:12], 9, 1)
+    Prong1Model = Tau_Model(1, [DataP1.input_track[:,0:10,:], DataP1.input_tower[:,0:6,:], p1_jet_input], DataP1.sig_pt, DataP1.bck_pt, DataP1.jet_pt, DataP1.Ytrain, DataP1.new_weights, DataP1.cross_section, DataP1.mu, kinematic_vars={"jet_Eta" : DataP1.input_jet[:, 12], "jet_Phi" : DataP1.input_jet[:, 13]})
+    plot_2_histogram("{}Train_weights-Eval_weights".format(prefix), Prong1Model.w_train, Prong1Model.eval_w, np.ones_like(Prong1Model.w_train), np.ones_like(Prong1Model.eval_w), 70)
 
     all_sig_pt = Prong1Model.jet_pt[Prong1Model.index_of_sig_bck == "s"]
     all_bgk_pt = Prong1Model.jet_pt[Prong1Model.index_of_sig_bck == "b"]
     all_sig_w = Prong1Model.w[Prong1Model.index_of_sig_bck == "s"]
     all_bgk_w = Prong1Model.w[Prong1Model.index_of_sig_bck == "b"]
     bck_weight = Prong1Model.w[Prong1Model.index_of_sig_bck == "b"]
-    plot_2_histogram("All_Jet_PT", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0)
+    plot_2_histogram("{}All_Jet_PT".format(prefix), all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0)
 
 
-    plt_2hist("All_Jet_PT", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
+    plt_2hist("{}All_Jet_PT".format(prefix), all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
 
 
 
@@ -237,14 +255,14 @@ if do_RNN:
     training_bck_pt = Prong1Model.train_jet_pt[Prong1Model.train_sigbck_index == "b"]
     train_s_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "s"]
     train_b_w = Prong1Model.w_train[Prong1Model.train_sigbck_index == "b"]
-    plt_2hist("Training_Jet_PT", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
+    plt_2hist("{}Training_Jet_PT".format(prefix), training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
 
 
     eval_sig_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "s"]
     eval_bck_pt = Prong1Model.eval_jet_pt[Prong1Model.eval_sigbck_index == "b"]
     eval_s_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "s"]
     eval_b_w = Prong1Model.eval_w[Prong1Model.eval_sigbck_index == "b"]
-    plt_2hist("Evaluation_Jet_PT", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
+    plt_2hist("{}Evaluation_Jet_PT".format(prefix), eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=710.0, log_plot=True)
 
     #plt.show()
 
@@ -254,18 +272,18 @@ if do_RNN:
     s_w = DataP1.cross_section[-DataP1.length_sig:-1]
     b_w = DataP1.cross_section[0:DataP1.length_bck]
 
-    plot_2_histogram("dataproc_jet_pt", sig_pt, bck_pt, s_w, b_w, 50, hist_min=20., hist_max=3300.0)
+    plot_2_histogram("{}dataproc_jet_pt".format(prefix), sig_pt, bck_pt, s_w, b_w, 50, hist_min=20., hist_max=3300.0)
 
 
     bck_weight = DataP1.new_weights[0:DataP1.length_bck]
     sig_weight = DataP1.new_weights[-DataP1.length_sig:-1]
 
-    plot_2_histogram("new_weights", sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
+    plot_2_histogram("{}new_weights".format(prefix), sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
 
-    plt.show()
 
-    Prong1Model.Model_Fit(256, 100, 0.2, model=Prong1Model.RNNmodel, inputs=Prong1Model.inputs)
-    Prong1Model.plot_loss()
+    Prong1Model.Model_Fit(256, 100, 0.4, model=Prong1Model.RNNmodel, inputs=Prong1Model.inputs)
+    Prong1Model.load_model("RNN_Model_Prong-1.h5")
+    #Prong1Model.plot_loss()
 
 
     train_real_y, train_pred_y = Prong1Model.get_train_scores(Prong1Model.RNNmodel, Prong1Model.inputs)
@@ -277,19 +295,17 @@ if do_RNN:
 
     back_real_y, back_pred_y, back_jet_pt = Prong1Model.predict_back(Prong1Model.RNNmodel, Prong1Model.eval_back_inputs)
 
-    Prong1Plots = Plots( "Prong1Plots", real_y, pred_y, Prong1Model.eval_w, train_real_y, train_pred_y, train_weights, jet_pt)
+    Prong1Plots = Plots( "{}Prong1Plots".format(prefix), real_y, pred_y, Prong1Model.eval_w, train_real_y, train_pred_y, train_weights, jet_pt)
 
-    back_plots = Plots("P1_backplots", back_real_y, back_pred_y, Prong1Model.eval_back_w, train_real_y, train_pred_y, train_weights, back_jet_pt)
+    back_plots = Plots("{}P1_backplots".format(prefix), back_real_y, back_pred_y, Prong1Model.eval_back_w, train_real_y, train_pred_y, train_weights, back_jet_pt)
 
     Prong1Plots.plot_raw_score_vs_jetPT()
     Prong1Plots.histogram_RNN_score()
 
     back_plots.histogram_RNN_score()
 
-    prong1_rejveff = Prong1Plots.plot_rej_vs_eff("ROC_Prong1", "ROC_curves/", do_train=True)
+    prong1_rejveff = Prong1Plots.plot_rej_vs_eff("{}ROC_Prong1".format(prefix), "ROC_curves/", do_train=True)
 
-    plt.draw()
-    plt.show()
 
     sig_train_pt = Prong1Model.train_jet_pt[Prong1Model.train_sigbck_index == "s"]
     sig_train_weight = Prong1Model.w_train[Prong1Model.train_sigbck_index == "s"]
@@ -323,7 +339,10 @@ if do_RNN:
     #ATLAS Score Plot
     rnn_score = ScorePlot(test=True, train=True, log_y=True)
     rnn_score.plot(sig_train_score, bkg_train_score, sig_train_weight, bkg_train_weight,
-                   sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight, "Prong1", "score_plots/")
+                   sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight, "{}Prong1".format(prefix), "score_plots/")
+    rnn_score.plot_flattened_sig_data(sig_train_score[:, 0], bkg_train_score[:,0], sig_train_weight, bkg_train_weight,
+                   sig_test_score[:,0], bkg_test_score[:,0], sig_test_weight, bkg_test_weight, "{}Prong1".format(prefix),
+                   "score_plots/")
     plt.show()
   #  input("Enter..")
 
@@ -365,39 +384,39 @@ if do_RNN:
         colours = ["red", "blue", "green", "violet"]
        # for eff in efficiency:
         pt_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_pt)
-        pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "1prong_Jet_PT_eff",
+        pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score, sig_test_mu, "{}1prong_Jet_PT_eff".format(prefix), r"Jet $p_T$ (GeV)",
                                     sig_test_xvar, sig_test_weight, "efficiencies/")
         pt_rejection = RejectionPlot(eff , colours, bins=btest_bins_pt)
         pt_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight, bkg_test_pt,
-                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "1prong_Jet_PT_rej", "rejection/")
+                                             bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, "{}1prong_Jet_PT_rej".format(prefix), r"Jet $p_T$ (GeV)", "rejection/")
 
         mu_efficiency = EfficiencyPlot(eff , colours, bins=stest_bins_mu)
         mu_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                         sig_test_mu, "1prong_Mu_eff",
+                                         sig_test_mu, "{}1prong_Mu_eff".format(prefix), r"$\mu$",
                                          sig_test_mu, sig_test_weight, "efficiencies/")
         mu_rejection = RejectionPlot(eff , colours, bins=btest_bins_mu)
         mu_rej_plot = mu_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
                                         bkg_test_pt,
                                         bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_mu,
-                                        "1prong_Mu_eff", "rejection/")
+                                        "{}1prong_Mu_eff".format(prefix), r"$\mu$", "rejection/")
         eta_efficiency = EfficiencyPlot(eff , colours, bins=stest_bins_eta)
         eta_eff_plot = eta_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                         sig_test_mu, "1prong_jet_Eta_eff",
+                                         sig_test_mu, "{}1prong_jet_Eta_eff".format(prefix), r"$|\eta|$",
                                          np.abs(sig_test_eta), sig_test_weight, "efficiencies/")
         eta_rejection = RejectionPlot(eff , colours, bins=btest_bins_eta)
         eta_rej_plot = eta_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
                                         bkg_test_pt,
                                         bkg_test_weight, bkg_test_score, bkg_test_mu, np.abs(bck_test_eta),
-                                        "1prong_jet_Eta_rej", "rejection/")
+                                        "{}1prong_jet_Eta_rej".format(prefix), r"$|\eta|$", "rejection/")
         phi_efficiency = EfficiencyPlot(eff , colours, bins=stest_bins_phi)
         phi_eff_plot = phi_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                          sig_test_mu, "1prong_jet_Phi_eff",
+                                          sig_test_mu, "{}1prong_jet_Phi_eff".format(prefix), r"$|\phi|$",
                                           np.abs(sig_test_phi), sig_test_weight, "efficiencies/")
         phi_rejection = RejectionPlot(eff , colours, bins=btest_bins_phi)
         phi_rej_plot = phi_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
                                          bkg_test_pt,
                                          bkg_test_weight, bkg_test_score, bkg_test_mu, np.abs(bck_test_phi),
-                                         "1prong_jet_Phi_rej", "rejection/")
+                                         "{}1prong_jet_Phi_rej".format(prefix), r"$|\phi|$", "rejection/")
         #plt.show()
         input("enter...")
     else:
@@ -421,27 +440,35 @@ if do_RNN:
 
 ######################################
 if prong3:
-    DataP3 = RNN_Data(3, False, "prong3_data", print_hists=False,
-                      BacktreeFile=["0-1_background_wPU_tree_3-Prong", "1-1_background_wPU_tree_3-Prong",
-                                    "2-1_background_wPU_tree_3-Prong", "3-1_background_wPU_tree_3-Prong",
-                                    "4-1_background_wPU_tree_3-Prong",
-                                    "0-2_background_wPU_tree_3-Prong", "1-2_background_wPU_tree_3-Prong",
-                                    "2-2_background_wPU_tree_3-Prong", "3-2_background_wPU_tree_3-Prong",
-                                    "4-2_background_wPU_tree_3-Prong"]
-                      , BackTreeName=["0-1_background_wPU_tree", "1-1_background_wPU_tree", "2-1_background_wPU_tree",
-                                      "3-1_background_wPU_tree", "4-1_background_wPU_tree",
-                                      "0-2_background_wPU_tree", "1-2_background_wPU_tree", "2-2_background_wPU_tree",
-                                      "3-2_background_wPU_tree", "4-2_background_wPU_tree"]
-                      , SignaltreeFile=["0_signal_wPU_tree_3-Prong", "1_signal_wPU_tree_3-Prong"],
-                      SignalTreeName=["0_signal_wPU_tree", "1_signal_wPU_tree"], BackendPartOfTree="",
+    DataP3 = RNN_Data(3, False, "{}prong3_data".format(prefix), print_hists=False,
+                      BacktreeFile=["{}0-1_background_wPU_tree_3-Prong".format(prefix), "{}1-1_background_wPU_tree_3-Prong".format(prefix),
+                                    "{}2-1_background_wPU_tree_3-Prong".format(prefix), "{}3-1_background_wPU_tree_3-Prong".format(prefix),
+                                    "{}4-1_background_wPU_tree_3-Prong".format(prefix),
+                                    "{}0-2_background_wPU_tree_3-Prong".format(prefix), "{}1-2_background_wPU_tree_3-Prong".format(prefix),
+                                    "{}2-2_background_wPU_tree_3-Prong".format(prefix), "{}3-2_background_wPU_tree_3-Prong".format(prefix),
+                                    "{}4-2_background_wPU_tree_3-Prong".format(prefix)]
+                      , BackTreeName=["{}0-1_background_wPU_tree".format(prefix), "{}1-1_background_wPU_tree".format(prefix), "{}2-1_background_wPU_tree".format(prefix),
+                                      "{}3-1_background_wPU_tree".format(prefix), "{}4-1_background_wPU_tree".format(prefix),
+                                      "{}0-2_background_wPU_tree".format(prefix), "{}1-2_background_wPU_tree".format(prefix), "{}2-2_background_wPU_tree".format(prefix),
+                                      "{}3-2_background_wPU_tree".format(prefix), "{}4-2_background_wPU_tree".format(prefix)]
+                      , SignaltreeFile=["{}0_signal_wPU_tree_3-Prong".format(prefix), "{}1_signal_wPU_tree_3-Prong".format(prefix)],
+                      SignalTreeName=["{}0_signal_wPU_tree".format(prefix), "{}1_signal_wPU_tree".format(prefix)], BackendPartOfTree="",
                       SignalendPartOfTree="")
 
+    p3_jet_input = np.delete(DataP3.input_jet[:, 1:12], 10, 1)
+
+    print(np.shape(p3_jet_input))
+    print(np.shape(DataP3.Ytrain))
+    print(np.shape(DataP3.input_track))
+    print(np.shape(DataP3.jet_pt))
+   # input("...")
+
     Prong3Model = Tau_Model(3,
-                            [DataP3.input_track[:, 0:6, :], DataP3.input_tower[:, 0:10, :], DataP3.input_jet[:, 1:12]],
+                            [DataP3.input_track[:, 0:10, :], DataP3.input_tower[:, 0:6, :], p3_jet_input],
                             DataP3.sig_pt, DataP3.bck_pt, DataP3.jet_pt, DataP3.Ytrain, DataP3.new_weights,
                             DataP3.cross_section, DataP3.mu,
                             kinematic_vars={"jet_Eta": DataP3.input_jet[:, 12], "jet_Phi": DataP3.input_jet[:, 13]})
-    plot_2_histogram("Train_weights-Eval_weights_3Prong", Prong3Model.w_train, Prong3Model.eval_w,
+    plot_2_histogram("{}Train_weights-Eval_weights_3Prong".format(prefix), Prong3Model.w_train, Prong3Model.eval_w,
                      np.ones_like(Prong3Model.w_train), np.ones_like(Prong3Model.eval_w), 70)
 
     all_sig_pt = Prong3Model.jet_pt[Prong3Model.index_of_sig_bck == "s"]
@@ -449,9 +476,9 @@ if prong3:
     all_sig_w = Prong3Model.w[Prong3Model.index_of_sig_bck == "s"]
     all_bgk_w = Prong3Model.w[Prong3Model.index_of_sig_bck == "b"]
     bck_weight = Prong3Model.w[Prong3Model.index_of_sig_bck == "b"]
-    plot_2_histogram("All_Jet_PT_3Prong", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0)
+    plot_2_histogram("{}All_Jet_PT_3Prong".format(prefix), all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=3300.0)
 
-    plt_2hist("All_Jet_PT_3Prong", all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=710.0,
+    plt_2hist("{}All_Jet_PT_3Prong".format(prefix), all_sig_pt, all_bgk_pt, all_sig_w, all_bgk_w, 50, hist_min=20., hist_max=710.0,
               log_plot=True)
 
     training_sig_pt = Prong3Model.train_jet_pt[Prong3Model.train_sigbck_index == "s"]
@@ -459,17 +486,15 @@ if prong3:
     training_bck_pt = Prong3Model.train_jet_pt[Prong3Model.train_sigbck_index == "b"]
     train_s_w = Prong3Model.w_train[Prong3Model.train_sigbck_index == "s"]
     train_b_w = Prong3Model.w_train[Prong3Model.train_sigbck_index == "b"]
-    plt_2hist("Training_Jet_PT_3Prong", training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20.,
+    plt_2hist("{}Training_Jet_PT_3Prong".format(prefix), training_sig_pt, training_bck_pt, train_s_w, train_b_w, 50, hist_min=20.,
               hist_max=710.0, log_plot=True)
 
     eval_sig_pt = Prong3Model.eval_jet_pt[Prong3Model.eval_sigbck_index == "s"]
     eval_bck_pt = Prong3Model.eval_jet_pt[Prong3Model.eval_sigbck_index == "b"]
     eval_s_w = Prong3Model.eval_w[Prong3Model.eval_sigbck_index == "s"]
     eval_b_w = Prong3Model.eval_w[Prong3Model.eval_sigbck_index == "b"]
-    plt_2hist("Evaluation_Jet_PT_3Prong", eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=710.0,
+    plt_2hist("{}Evaluation_Jet_PT_3Prong".format(prefix), eval_sig_pt, eval_bck_pt, eval_s_w, eval_b_w, 50, hist_min=20., hist_max=710.0,
               log_plot=True)
-
-    plt.show()
 
     sig_pt = DataP3.sig_pt
     bck_pt = DataP3.bck_pt
@@ -477,12 +502,12 @@ if prong3:
     s_w = DataP3.cross_section[-DataP3.length_sig:-1]
     b_w = DataP3.cross_section[0:DataP3.length_bck]
 
-    plot_2_histogram("dataproc_jet_pt_3Prong", sig_pt, bck_pt, s_w, b_w, 50, hist_min=20., hist_max=3300.0)
+    plot_2_histogram("{}dataproc_jet_pt_3Prong".format(prefix), sig_pt, bck_pt, s_w, b_w, 50, hist_min=20., hist_max=3300.0)
 
     bck_weight = DataP3.new_weights[0:DataP3.length_bck]
     sig_weight = DataP3.new_weights[-DataP3.length_sig:-1]
 
-    plot_2_histogram("new_weights_3Prong", sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
+    plot_2_histogram("{}new_weights_3Prong".format(prefix), sig_weight, bck_weight, np.ones_like(sig_weight), np.ones_like(bck_weight), 75)
 
     Prong3Model.Model_Fit(256, 100, 0.2, model=Prong3Model.RNNmodel, inputs=Prong3Model.inputs)
     Prong3Model.plot_loss()
@@ -497,10 +522,10 @@ if prong3:
 
     back_real_y, back_pred_y, back_jet_pt = Prong3Model.predict_back(Prong3Model.RNNmodel, Prong3Model.eval_back_inputs)
 
-    Prong3Plots = Plots("Prong3Plots", real_y, pred_y, Prong3Model.eval_w, train_real_y, train_pred_y, train_weights,
+    Prong3Plots = Plots("{}Prong3Plots".format(prefix), real_y, pred_y, Prong3Model.eval_w, train_real_y, train_pred_y, train_weights,
                         jet_pt)
 
-    back_plots = Plots("P3_backplots", back_real_y, back_pred_y, Prong3Model.eval_back_w, train_real_y, train_pred_y,
+    back_plots = Plots("{}P3_backplots".format(prefix), back_real_y, back_pred_y, Prong3Model.eval_back_w, train_real_y, train_pred_y,
                        train_weights, back_jet_pt)
 
     Prong3Plots.plot_raw_score_vs_jetPT()
@@ -508,10 +533,8 @@ if prong3:
 
     back_plots.histogram_RNN_score()
 
-    prong3_rejveff = Prong3Plots.plot_rej_vs_eff("ROC_Prong3", "ROC_curves/", do_train=True)
+    prong3_rejveff = Prong3Plots.plot_rej_vs_eff("{}ROC_Prong3".format(prefix), "ROC_curves/", do_train=True)
 
-    plt.draw()
-    plt.show()
 
     sig_train_pt = Prong3Model.train_jet_pt[Prong3Model.train_sigbck_index == "s"]
     sig_train_weight = Prong3Model.w_train[Prong3Model.train_sigbck_index == "s"]
@@ -549,7 +572,10 @@ if prong3:
     # ATLAS Score Plot
     rnn_score = ScorePlot(test=True, train=True, log_y=True)
     rnn_score.plot(sig_train_score, bkg_train_score, sig_train_weight, bkg_train_weight,
-                   sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight, "Prong3", "score_plots/")
+                   sig_test_score, bkg_test_score, sig_test_weight, bkg_test_weight, "{}Prong3".format(prefix), "score_plots/")
+    rnn_score.plot_flattened_sig_data(sig_train_score[:,0], bkg_train_score[:,0], sig_train_weight, bkg_train_weight,
+                   sig_test_score[:,0], bkg_test_score[:,0], sig_test_weight, bkg_test_weight, "{}Prong3".format(prefix),
+                   "score_plots/")
     plt.show()
     #  input("Enter..")
 
@@ -592,41 +618,41 @@ if prong3:
         # for eff in efficiency:
         pt_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_pt)
         pt_eff_plot = pt_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                         sig_test_mu, "3prong_Jet_PT_eff",
+                                         sig_test_mu, "{}3prong_Jet_PT_eff".format(prefix), r"Jet $p_T$ (GeV)",
                                          sig_test_xvar, sig_test_weight, "efficiencies/")
         pt_rejection = RejectionPlot(eff, colours, bins=btest_bins_pt, ylim=(0, 600))
         pt_rej_plot = pt_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
                                         bkg_test_pt,
                                         bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar,
-                                        "3prong_Jet_PT_rej", "rejection/")
+                                        "{}3prong_Jet_PT_rej".format(prefix), r"Jet $p_T$ (GeV)", "rejection/")
 
         mu_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_mu)
         mu_eff_plot = mu_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                         sig_test_mu, "3prong_Mu_eff",
+                                         sig_test_mu, "{}3prong_Mu_eff".format(prefix), r"$\mu$",
                                          sig_test_mu, sig_test_weight, "efficiencies/")
         mu_rejection = RejectionPlot(eff, colours, bins=btest_bins_mu, ylim=(0, 400))
         mu_rej_plot = mu_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
                                         bkg_test_pt,
                                         bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_mu,
-                                        "3prong_Mu_eff", "rejection/")
+                                        "{}3prong_Mu_eff".format(prefix), r"$\mu$", "rejection/")
         eta_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_eta)
         eta_eff_plot = eta_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                           sig_test_mu, "3prong_jet_Eta_eff",
+                                           sig_test_mu, "{}3prong_jet_Eta_eff".format(prefix), r"$|\eta|$",
                                            sig_test_eta, sig_test_weight, "efficiencies/")
         eta_rejection = RejectionPlot(eff, colours, bins=btest_bins_eta, ylim=(0, 2500))
         eta_rej_plot = eta_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
                                           bkg_test_pt,
                                           bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_eta,
-                                          "3prong_jet_Eta_rej", "rejection/")
+                                          "{}3prong_jet_Eta_rej".format(prefix), r"$|\eta|$", "rejection/")
         phi_efficiency = EfficiencyPlot(eff, colours, bins=stest_bins_phi)
         phi_eff_plot = phi_efficiency.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-                                           sig_test_mu, "3prong_jet_Phi_eff",
+                                           sig_test_mu, "{}3prong_jet_Phi_eff".format(prefix), r"$|\phi|$",
                                            sig_test_phi, sig_test_weight, "efficiencies/")
         phi_rejection = RejectionPlot(eff, colours, bins=btest_bins_phi, ylim=(0, 3000))
         phi_rej_plot = phi_rejection.plot(sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
                                           bkg_test_pt,
                                           bkg_test_weight, bkg_test_score, bkg_test_mu, bck_test_phi,
-                                          "3prong_jet_Phi_rej", "rejection/")
+                                          "{}3prong_jet_Phi_rej".format(prefix), r"$|\phi|$", "rejection/")
         plt.show()
         input("enter...")
     else:

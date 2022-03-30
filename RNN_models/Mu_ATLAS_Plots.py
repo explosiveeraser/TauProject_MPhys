@@ -92,6 +92,73 @@ class ScorePlot(Plot):
 
         self.histopt = kwargs
 
+    def plot_flattened_sig_data(self, sig_train, bkg_train, sig_train_weight, bkg_train_weight,
+             sig_test, bkg_test, sig_test_weight, bkg_test_weight, name, save_dir):
+
+        #plot
+        fig, ax = plt.subplots()
+        print("sig train shape : {}".format(np.shape(sig_train)))
+        print("sig train weight shape : {}".format(np.shape(sig_train_weight)))
+        print("bkg train shape : {}".format(np.shape(bkg_train)))
+        print("bkg train weight shape : {}".format(np.shape(bkg_train_weight)))
+
+        print("sig test shape : {}".format(np.shape(sig_test)))
+        print("sig test weight shape : {}".format(np.shape(sig_test_weight)))
+        print("bkg test shape : {}".format(np.shape(bkg_test)))
+        print("bkg test weight shape : {}".format(np.shape(bkg_test_weight)))
+
+        if self.train:
+            sig_train_percent = np.linspace(0, 100, 26)
+            print(sig_train_percent)
+            sig_train_binedges = np.percentile(sig_train, sig_train_percent)
+            #sig_train_binedges[-1] = 1.001
+            bck_trainbins, _ = np.histogram(bkg_train, bins=sig_train_binedges, weights=bkg_train_weight)
+            sig_trainbins, _ = np.histogram(sig_train, bins=sig_train_binedges, weights=sig_train_weight)
+            sig_train_percent /= 100.0
+            x = (sig_train_percent[1:] + sig_train_percent[:-1]) / 2.0
+            print(x)
+            print(sig_train_binedges)
+            print(sig_trainbins)
+            print(bck_trainbins)
+            ax.hist(x, bins=sig_train_percent, weights=bck_trainbins,
+                    color=colors["violet"], label="Bkg. train", histtype="step", density=True)
+            ax.hist(x, bins=sig_train_percent, weights=sig_trainbins,
+                    color=colors["green"], label="Sig. train", histtype="step", density=True)
+
+        if self.test:
+            sig_test_percent = np.linspace(0.0, 100.0, 26)
+            sig_test_binedges = np.percentile(sig_test, sig_test_percent)
+            #sig_test_binedges[-1] = 1.001
+            bck_testbins, _ = np.histogram(bkg_test, bins=sig_test_binedges, weights=bkg_test_weight)
+            sig_testbins, _ = np.histogram(sig_test, bins=sig_test_binedges, weights=sig_test_weight)
+            sig_test_percent /= 100.0
+            x = (sig_test_percent[1:] + sig_test_percent[:-1]) / 2.0
+            ax.hist(x,  bins=sig_test_percent, weights=bck_testbins,
+                    color=colors["blue"], label="Bkg. train", histtype="step", density=True)
+            ax.hist(x, bins=sig_test_percent, weights=sig_testbins,
+                    color=colors["red"], label="Sig. test", histtype="step", density=True)
+
+        ax.legend()
+        if self.log_y:
+            ax.set_yscale("log")
+        ax.set_xlabel("Signal probability", x=1, ha="right")
+        ax.set_ylabel("Norm. number of entries", y=1, ha="right")
+        ax.set_ylim((10e-5, 10e0))
+        # Set y-range limits
+        ax.autoscale()
+        y_lo, y_hi = ax.get_ylim()
+
+        if self.log_y:
+            y_hi *= 1.4
+            y_lo /= 1.4
+        else:
+            diff = y_hi - y_lo
+            y_hi += 0.05 * diff
+        y_lo = 10e-5
+        ax.set_ylim(y_lo, y_hi)
+
+        plt.savefig("{}flattened_{}_score_plot.png".format(save_dir, name))
+        return fig
 
     def plot(self, sig_train, bkg_train, sig_train_weight, bkg_train_weight,
              sig_test, bkg_test, sig_test_weight, bkg_test_weight, name, save_dir):
@@ -334,7 +401,7 @@ class EfficiencyPlot(Plot):
 
 
     def plot(self, sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_score,
-             sig_test_mu, xvar_name, xvar, xvar_weight, save_dir):
+             sig_test_mu, name, xvar_name, xvar, xvar_weight, save_dir):
 
         flat = []
         pass_thr = []
@@ -367,7 +434,7 @@ class EfficiencyPlot(Plot):
                     ax.errorbar(bin_center, eff.median,
                                 xerr=bin_half_width,
                                 yerr=yerr,
-                                fmt="o", color=colors[self.colors[idx]], label=label, zorder=z)
+                                fmt="o", ms=0.25, color=colors[self.colors[idx]], label=label, zorder=z)
 
         else:
             for idx in range(0, len(self.eff)):
@@ -379,7 +446,7 @@ class EfficiencyPlot(Plot):
                     ax.errorbar(bin_center, eff.median,
                                 xerr=bin_half_width,
                                 yerr=yerr,
-                                fmt="o", color=colors[self.colors[idx]], label="Working point: {}".format(self.eff[idx]), zorder=z)
+                                fmt="o", ms=0.25,  color=colors[self.colors[idx]], label="Working point: {}".format(self.eff[idx]), zorder=z)
 
         if self.ylim:
             ax.set_ylim(self.ylim)
@@ -392,7 +459,7 @@ class EfficiencyPlot(Plot):
         ax.set_ylabel("Efficiency {}".format(xvar_name), y=1, ha="right")
         ax.legend()
 
-        plt.savefig("{}{}.png".format(save_dir, xvar_name))
+        plt.savefig("{}{}.png".format(save_dir, name))
         return fig
 
 
@@ -411,7 +478,7 @@ class RejectionPlot(Plot):
 
 
     def plot(self, sig_train_pt, sig_train_score, sig_train_mu, sig_test_pt, sig_test_weight,
-             bkg_test_pt, bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, xvar_name, save_dir):
+             bkg_test_pt, bkg_test_weight, bkg_test_score, bkg_test_mu, bkg_test_xvar, name, xvar_name, save_dir):
 
         flat = []
         pass_thr = []
@@ -447,7 +514,7 @@ class RejectionPlot(Plot):
                     ax.errorbar(bin_center, rej.median,
                                 xerr=bin_half_width,
                                 yerr=yerr,
-                                fmt="o", color=colors[self.colors[idx]], label=label, zorder=z)
+                                fmt="o",  ms=0.25, color=colors[self.colors[idx]], label=label, zorder=z)
         else:
             for idx in range(0, len(self.eff)):
                 for z, (rej, c) in enumerate(
@@ -458,7 +525,7 @@ class RejectionPlot(Plot):
                     ax.errorbar(bin_center, rej.median,
                                 xerr=bin_half_width,
                                 yerr=yerr,
-                               fmt="o", color=colors[self.colors[idx]], label="Working point: {}".format(self.eff[idx]), zorder=z)
+                               fmt="o", ms=0.25, color=colors[self.colors[idx]], label="Working point: {}".format(self.eff[idx]), zorder=z)
 
         if self.ylim:
             ax.set_ylim(self.ylim)
@@ -470,6 +537,6 @@ class RejectionPlot(Plot):
         ax.set_xlabel(xvar_name.split("/")[-1], x=1, ha="right")
         ax.set_ylabel("Rejection {}".format(xvar_name), y=1, ha="right")
         ax.legend()
-        plt.savefig("{}{}.png".format(save_dir, xvar_name))
+        plt.savefig("{}{}.png".format(save_dir, name))
 
         return fig

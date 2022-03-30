@@ -126,7 +126,7 @@ class Signal(Dataset):
 
                 jet = self._branchReader["Jet"].At(idx)
                 ##
-                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and abs(jet.Charge) == 1 and (
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and (
                         abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52):
                 ##
                     self.num_of_object["Jet"] += 1
@@ -207,6 +207,8 @@ class Signal(Dataset):
             tower_Edges3 = array('f', MaxNtower * [0.])
             tower_deltaEta = array('f', MaxNtower * [0.])
             tower_deltaPhi = array('f', MaxNtower * [0.])
+            nCoreTrack = array('i', [0])
+            nCoreTower = array('i', [0])
             file = ROOT.TFile("NewTTrees/" + str(fname) + "_" + prong + ".root", "RECREATE")
             tree = ROOT.TTree(fname, str(fname + "_" + prong + " Tree"))
             tree.Branch("jet_entry", jet_entry, "jet_entry/I")
@@ -250,14 +252,22 @@ class Signal(Dataset):
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
             tree.Branch("jet_delphesTauTag", jet_delphesTauTag, "jet_delphesTauTag/I")
+            tree.Branch("nCoreTrack", nCoreTrack, "nCoreTrack/I")
+            tree.Branch("nCoreTower", nCoreTower, "nCoreTower/I")
             num_jet_wCC = 0
             num_jet_woCC = 0
+            if prong == "1-Prong":
+                p = 1
+                lim = 6
+            elif prong == "3-Prong":
+                p = 3
+                lim = 8
             for jet in tqdm(self.JetArray):
-                if (jet.PT >= 20.0 and jet.PT <= 1600.0) and abs(jet.Eta) <= 2.5 and (
-                        abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and (
+                        abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and (jet.nCoreTracks >= p and jet.nCoreTracks <= lim) and len(
                         jet.Towers) >= 1 and jet.TruthTau[prong]:
                     num_jet_woCC += 1
-                if (jet.PT >= 20.0 and jet.PT <= 1600.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and (jet.nCoreTracks >= p and jet.nCoreTracks <= lim) and len(
                         jet.Towers) >= 1 and jet.TruthTau[prong]:
                     num_jet_wCC += 1
                     jet_entry[0] = int(jet.entry)
@@ -288,6 +298,8 @@ class Signal(Dataset):
                     nTower[0] = n_to
                     tot_ntr += n_tr
                     tot_nto += n_to
+                    nCoreTrack[0] = jet.nCoreTracks
+                    nCoreTower[0] = jet.nCoreTowers
                     for idx in range(0, n_tr):
                         con_track = jet.Tracks[idx]
                         track_entry[idx] = 3  # con_track.entry

@@ -172,7 +172,8 @@ class Tau_Model():
         self.RNN_ModelwoTowers()
 
     def basic_Model(self):
-        HL_input = Input(shape=(11,))
+        hl_len = len(self.jet_data[0])
+        HL_input = Input(shape=(hl_len,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer='RandomUniform',
                          bias_initializer='zeros')(HL_input)
         HLdense2 = Dense(128, activation='relu', kernel_initializer='RandomUniform',
@@ -195,8 +196,11 @@ class Tau_Model():
         backwards = False
         unroll = False
 
+        hl_len = len(self.jet_data[0])
+        tr_len = len(self.track_data[0][0])
+
         # HL Layers
-        HL_input = Input(shape=(11,))
+        HL_input = Input(shape=(hl_len,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HL_input)
         HLdense2 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
@@ -204,10 +208,10 @@ class Tau_Model():
         HLdense3 = Dense(16, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HLdense2)
         # Track Layers
-        Track_input1 = Input(shape=(None, 3))
+        Track_input1 = Input(shape=(None, tr_len))
         maskedTrack = Masking()(Track_input1)
         # Track_input2 = Input(shape=(10,))
-        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, 3), kernel_initializer = 'RandomUniform',
+        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, tr_len), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
         trackDense2 = Dense(32, activation='relu', input_shape=(None, None, 32), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
@@ -215,9 +219,9 @@ class Tau_Model():
         trackSD2 = TimeDistributed(trackDense2)(trackSD1)
         # mergeTrack = Concatenate()([trackSD1, trackSD2])
         # flatten = TimeDistributed(Flatten())(trackSD2)
-        trackLSTM1 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
+        trackLSTM1 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(trackSD2)
-        trackLSTM2 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32),  kernel_initializer = 'RandomUniform',
+        trackLSTM2 = LSTM(32, activation="tanh", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32),  kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(trackLSTM1)
         # Layers Merged
         mergedLayer = Concatenate()([trackLSTM2, HLdense3])
@@ -239,8 +243,12 @@ class Tau_Model():
         backwards = False
         unroll = False
 
+        hl_len = len(self.jet_data[0])
+        tr_len = len(self.track_data[0][0])
+        to_len = len(self.tower_data[0][0])
+
         # HL Layers
-        HL_input = Input(shape=(11,))
+        HL_input = Input(shape=(hl_len,))
         HLdense1 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HL_input)
         HLdense2 = Dense(128, activation='relu', kernel_initializer = 'RandomUniform',
@@ -248,10 +256,10 @@ class Tau_Model():
         HLdense3 = Dense(16, activation='relu', kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(HLdense2)
         # Track Layers
-        Track_input1 = Input(shape=(None, 5))
+        Track_input1 = Input(shape=(None, tr_len))
         maskedTrack = Masking()(Track_input1)
         # Track_input2 = Input(shape=(10,))
-        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, 5), kernel_initializer = 'RandomUniform',
+        trackDense1 = Dense(32, activation='relu', input_shape=(None, None, tr_len), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
         trackDense2 = Dense(32, activation='relu', input_shape=(None, None, 32), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
@@ -259,24 +267,24 @@ class Tau_Model():
         trackSD2 = TimeDistributed(trackDense2)(trackSD1)
         # mergeTrack = Concatenate()([trackSD1, trackSD2])
         # flatten = TimeDistributed(Flatten())(trackSD2)
-        trackLSTM1 = LSTM(32, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
+        trackLSTM1 = LSTM(32, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(trackSD2)
-        trackLSTM2 = LSTM(32, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 32), return_sequences=False, kernel_initializer = 'RandomUniform',
+        trackLSTM2 = LSTM(32, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32), return_sequences=False, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(trackLSTM1)
         # Tower Layers
-        Tower_input1 = Input(shape=(None, 3))
+        Tower_input1 = Input(shape=(None, to_len))
         maskedTower = Masking()(Tower_input1)
         # Tower_input2 = Input(shape=(14,))
-        towerDense1 = Dense(32, activation='relu', input_shape=(None, None, 3), kernel_initializer = 'RandomUniform',
+        towerDense1 = Dense(32, activation='relu', input_shape=(None, None, to_len), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
         towerDense2 = Dense(32, activation='relu', input_shape=(None, None, 32), kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')
         towerSD1 = TimeDistributed(towerDense1)(maskedTower)
         towerSD2 = TimeDistributed(towerDense2)(towerSD1)
         # towerFlatten = TimeDistributed(Flatten())(towerSD2)
-        towerLSTM1 = LSTM(24, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 32), return_sequences=True, kernel_initializer = 'RandomUniform',
+        towerLSTM1 = LSTM(24, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 24), return_sequences=True, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(towerSD2)
-        towerLSTM2 = LSTM(24, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 10, 24), return_sequences=False, kernel_initializer = 'RandomUniform',
+        towerLSTM2 = LSTM(24, activation="relu", go_backwards=backwards, unroll=unroll, input_shape=(None, 6, 24), return_sequences=False, kernel_initializer = 'RandomUniform',
                 bias_initializer = 'zeros')(towerLSTM1)
         # Layers Merged
         mergedLayer = Concatenate()([trackLSTM2, towerLSTM2, HLdense3])
@@ -333,6 +341,7 @@ class Tau_Model():
             print("TrueTau/FakeTau", results[3]/(results[4]+results[5]))
         print("Taus Not IDed : ", results[5])
         print("Total Taus: ",results[3]+results[5])
+        self.eval_results = results
 
     def pt_reweight(self, sig_pt, bkg_pt, density=True, multiplier=1.):
         # Binning

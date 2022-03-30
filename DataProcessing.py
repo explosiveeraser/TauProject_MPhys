@@ -27,7 +27,7 @@ class DataProcessing():
             i = 0
             for tree in Sig_wPU:
                 signal_wPU = Signal(tree, print_hist=False, pile_up=True)
-                signal_wPU.write_taucan_ttree("1600pt_{}_signal_wPU_tree".format(i))
+                signal_wPU.write_taucan_ttree("NewCondCT_{}_signal_wPU_tree".format(i))
                 i += 1
                 Prong1 = 0
                 Prong3 = 0
@@ -83,9 +83,9 @@ class DataProcessing():
                 elif i >= 5:
                     background_wPU = Background(tree, print_hist=False, pile_up=True, weight_norm=1.)
                 if i <= 4:
-                    background_wPU.write_taucan_ttree("1600pt_{}-1_background_wPU_tree".format(i))
+                    background_wPU.write_taucan_ttree("NewCondCT_{}-1_background_wPU_tree".format(i))
                 elif i > 4:
-                    background_wPU.write_taucan_ttree("1600pt_{}-2_background_wPU_tree".format(i-5))
+                    background_wPU.write_taucan_ttree("NewCondCT_{}-2_background_wPU_tree".format(i-5))
                 Prong1 = 0
                 Prong3 = 0
                 ProngN = 0

@@ -137,7 +137,7 @@ class Background(Dataset):
 
                 jet = self._branchReader["Jet"].At(idx)
                 ##
-                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and abs(jet.Charge) == 1 and (
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and (
                         abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52):
                 ##
 
@@ -218,6 +218,8 @@ class Background(Dataset):
             tower_Edges3 = array('f', MaxNtower * [0.])
             tower_deltaEta = array('f', MaxNtower * [0.])
             tower_deltaPhi = array('f', MaxNtower * [0.])
+            nCoreTrack = array('i', [0])
+            nCoreTower = array('i', [0])
             file = ROOT.TFile("NewTTrees/" + str(fname) + "_" + prong + ".root", "RECREATE")
             tree = ROOT.TTree(fname, str(fname + "_" + prong + " Tree"))
             tree.Branch("jet_entry", jet_entry, "jet_entry/I")
@@ -260,9 +262,23 @@ class Background(Dataset):
             tree.Branch("tower_deltaEta", tower_deltaEta, "tower_deltaEta[nTower]/F")
             tree.Branch("tower_deltaPhi", tower_deltaPhi, "tower_deltaPhi[nTower]/F")
             tree.Branch("jet_TruthTau", jet_TruthTau, "jet_TruthTau/I")
+            tree.Branch("nCoreTrack", nCoreTrack, "nCoreTrack/I")
+            tree.Branch("nCoreTower", nCoreTower, "nCoreTower/I")
+            if prong == "1-Prong":
+                p = 1
+                lim = 6
+            elif prong == "3-Prong":
+                p = 3
+                lim = 8
+            nNoneChargeCond = 0
+            nChargeCond = 0
             for jet in tqdm(self.JetArray):
-                if (jet.PT >= 20.0 and jet.PT <= 1600.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and len(jet.Tracks) >= 1 and len(
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and (jet.nCoreTracks >= p and jet.nCoreTracks <= lim) and len(
                         jet.Towers) >= 1:
+                    nNoneChargeCond += 1
+                if (jet.PT >= 20.0) and abs(jet.Eta) <= 2.5 and abs(jet.charge) == 1 and (abs(jet.Eta) < 1.37 or abs(jet.Eta) > 1.52) and (jet.nCoreTracks >= p and jet.nCoreTracks <= lim) and len(
+                        jet.Towers) >= 1:
+                    nChargeCond += 1
                     jet_entry[0] = int(jet.entry)
                     jet_index[0] = int(jet.idx)
                     jet_cross_section[0] = jet.cross_section
@@ -290,6 +306,8 @@ class Background(Dataset):
                     nTower[0] = n_to
                     tot_ntr += n_tr
                     tot_nto += n_to
+                    nCoreTrack[0] = jet.nCoreTracks
+                    nCoreTower[0] = jet.nCoreTowers
                     for idx in range(0, n_tr):
                         con_track = jet.Tracks[idx]
                         track_entry[idx] = 3  # con_track.entry
@@ -312,6 +330,7 @@ class Background(Dataset):
                         tower_deltaEta[jdx] = con_tower.deltaEta
                         tower_deltaPhi[jdx] = con_tower.deltaPhi
                     tree.Fill()
+            print("With Charge Cond: {} | Without Charge Cond: {}".format(nChargeCond, nNoneChargeCond))
             print("Total number of tracks in this tree are: " + str(tot_ntr))
             print("Total number of towers in this tree are: " + str(tot_nto))
             tree.Print()

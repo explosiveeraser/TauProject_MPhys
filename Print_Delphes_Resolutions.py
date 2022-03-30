@@ -58,6 +58,60 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm, trange
 import root_numpy as rn
 from root_numpy import tree2array
+import matplotlib as mpl
+
+def mpl_setup(scale=0.49, aspect_ratio=8.0 / 6.0,
+              pad_left=0.16, pad_bottom=0.18,
+              pad_right=0.95, pad_top=0.95):
+    mpl.rcParams["font.sans-serif"] = ["Liberation Sans", "helvetica",
+                                       "Helvetica", "Arial"]
+    mpl.rcParams["font.family"] = "sans-serif"
+    mpl.rcParams["font.size"] = 8
+    mpl.rcParams["mathtext.default"] = "regular"
+
+    # LaTeX \the\textwidth
+    text_width_pt = 451.58598
+    inches_per_pt = 1.0 / 72.27
+    fig_width = text_width_pt * inches_per_pt * scale
+    fig_height = fig_width / aspect_ratio
+
+    mpl.rcParams["figure.figsize"] = [fig_width, fig_height]
+
+    mpl.rcParams["figure.subplot.left"] = pad_left
+    mpl.rcParams["figure.subplot.bottom"] = pad_bottom
+    mpl.rcParams["figure.subplot.top"] = pad_top
+    mpl.rcParams["figure.subplot.right"] = pad_right
+
+    mpl.rcParams["axes.xmargin"] = 0.0
+    mpl.rcParams["axes.ymargin"] = 0.0
+
+    mpl.rcParams["axes.labelsize"] = 10
+    mpl.rcParams["axes.linewidth"] = 0.6
+
+    mpl.rcParams["xtick.major.size"] = 6.0
+    mpl.rcParams["xtick.major.width"] = 0.6
+    mpl.rcParams["xtick.minor.size"] = 3.0
+    mpl.rcParams["xtick.minor.width"] = 0.6
+    mpl.rcParams["xtick.minor.visible"] = True
+    mpl.rcParams["xtick.top"] = True
+    mpl.rcParams["xtick.direction"] = "in"
+    mpl.rcParams["xtick.labelsize"] = 8
+
+    mpl.rcParams["ytick.major.size"] = 6.0
+    mpl.rcParams["ytick.major.width"] = 0.6
+    mpl.rcParams["ytick.minor.size"] = 3.0
+    mpl.rcParams["ytick.minor.width"] = 0.6
+    mpl.rcParams["ytick.minor.visible"] = True
+    mpl.rcParams["ytick.right"] = True
+    mpl.rcParams["ytick.direction"] = "in"
+    mpl.rcParams["ytick.labelsize"] = 8
+
+    mpl.rcParams["legend.frameon"] = False
+
+    mpl.rcParams["lines.linewidth"] = 1.1
+    mpl.rcParams["lines.markersize"] = 3.0
+
+mpl_setup()
 
 ROOT.gSystem.Load("../Delphes-3.5.0/build/libDelphes.so")
 
@@ -91,21 +145,34 @@ colorseq = [
     colors["grey"]
 ]
 
-def plt_2hist(title, xvar_name, sig_data, bck_data, sig_weight, bck_weight, num_bins, bins=False, save_dir="Resolution_Histograms/", log_plot=False, hist_max=None, hist_min=None):
+def plt_2hist(title, xvar_name, sig_data, bck_data, sig_weight, bck_weight, num_bins, bins=False, save_dir="Resolution_Histograms/", log_plot=False, legloc=0, hist_max=None, hist_min=None):
     fig, ax = plt.subplots()
+
+    bin_edges = np.histogram_bin_edges(sig_data, bins=num_bins)
+    ax.hist(bck_data, weights=bck_weight,
+            color=colors["blue"], label="background {}".format(xvar_name), bins=bin_edges, density=True,
+            histtype="step")
     ax.hist(sig_data, weights=sig_weight,
-            color=colors["red"], label="signal {}".format(xvar_name), bins=num_bins, density=True, histtype="step")
-    bin_edges = np.histogram_bin_edges(sig_data, bins=num_bins, weights=sig_weight)
+            color=colors["red"], label="signal {}".format(xvar_name), bins=bin_edges, density=True, histtype="step")
+    print(bin_edges)
     if hist_max != None:
         bin_edges[-1] = hist_max + 10
-    ax.hist(bck_data, weights=bck_weight,
-            color=colors["blue"], label="background {}".format(xvar_name), bins=bin_edges, density=True, histtype="step")
+
     if log_plot:
         ax.set_yscale("log")
-    ax.legend()
-    ax.set_xlabel("Signal {}".format(xvar_name), x=1, ha="right")
+
+    ax.legend(loc=legloc)
+    ax.set_xlabel("{}".format(xvar_name), x=1, ha="right")
     ax.set_ylabel("Norm. number of entries", y=1, ha="right")
     ax.autoscale()
+    if hist_max and hist_min:
+        ax.set_xlim((hist_min, hist_max))
+    y_lo, y_hi = ax.get_ylim()
+    if log_plot:
+        d = 0.5 * (y_hi - y_lo)
+    else:
+        d = 0.30 * (y_hi - y_lo)
+    ax.set_ylim(y_lo - d, y_hi + d)
     #ax.set_ylim(hist_min, hist_max)
     plt.savefig("{}{}.png".format(save_dir,title))
     plt.close("all")
@@ -173,9 +240,40 @@ sig_nev = sig_reader.GetEntries()
 back_cs = tree2array(back_chain, branches=["Event.CrossSection"]).astype(np.float32)
 sig_cs = tree2array(sig_chain, branches=["Event.CrossSection"]).astype(np.float32)
 
+maximums = {
+    "Eta" : 5.0,
+    "Phi" : 3.1,
+    "DeltaEta" : 0.6,
+    "DeltaPhi" : 0.6
+}
+
+legend_locs = {
+    "EventScale" : 0,
+    "JetPT" : 0,
+    "JetEta" : 3,
+    "JetPhi" : 0,
+    "JetDeltaEta" : 4,
+    "JetDeltaPhi" : 4,
+    "JetMass" : 0,
+    "JetCharge" : 2
+}
+
 
 for b in tqdm(print_vars.keys()):
+    text = ""
     for l in print_vars[b]:
+        if "DeltaEta" == l:
+            text = r"Jet $|\Delta \eta|$"
+        elif "DeltaPhi" == l:
+            text = r"Jet $|\Delta \phi|$"
+        elif "Eta" == l:
+            text = r"Jet $|\eta|$"
+        elif "Phi" == l:
+            text = r"Jet $|\phi|$"
+        elif "PT" == l:
+            text = r"Jet $p_T$"
+        else:
+            text = "{} {}".format(b, l)
         back_cross_sec = np.array([])
         sig_cross_sec = np.array([])
         bck_data = tree2array(back_chain, branches=["{}.{}".format(b, l)])
@@ -202,20 +300,26 @@ for b in tqdm(print_vars.keys()):
                 entry = entry[0].astype(np.float32)
             sig_arr = np.append(sig_arr, entry, axis=0).astype(np.float32)
             sig_cross_sec = np.append(sig_cross_sec, np.repeat(temp, len(entry)), axis=0).astype(np.float32)
+        if l in ["DeltaEta", "DeltaPhi", "Phi", "Eta"]:
+            sig_arr = np.abs(sig_arr)
+            bck_arr = np.abs(bck_arr)
         max_hist = np.max(bck_arr)
         if max_hist < np.max(sig_arr):
             max_hist = np.max(sig_arr)
         min_hist = np.min(bck_arr)
         if min_hist > np.min(sig_arr):
             min_hist = np.min(sig_arr)
-        plt_2hist("{}_{}_NoWeighting".format(b, l), "{} {}".format(b,l), sig_arr, bck_arr, np.ones_like(sig_arr),
+        if l in maximums.keys():
+            max_hist = maximums[l]
+        legloc = legend_locs["{}{}".format(b,l)]
+        plt_2hist("{}_{}_NoWeighting".format(b, l), text, sig_arr, bck_arr, np.ones_like(sig_arr),
                   np.ones_like(bck_arr), num_bins=50, hist_max=max_hist, hist_min=min_hist, save_dir="Resolution_Histograms/NoLog_NoWeight/")
-        plt_2hist("{}_{}_CrossSectionReweighted".format(b, l), "{} {}".format(b, l), sig_arr, bck_arr, np.ones_like(sig_cross_sec),
+        plt_2hist("{}_{}_CrossSectionReweighted".format(b, l), text, sig_arr, bck_arr, np.ones_like(sig_cross_sec),
                   back_cross_sec, num_bins=50, hist_max=max_hist, hist_min=min_hist, save_dir="Resolution_Histograms/NoLog_Weight/")
-        plt_2hist("{}_{}_Log_NoWeighting".format(b, l), "{} {}".format(b, l), sig_arr, bck_arr, np.ones_like(sig_arr),
-                  np.ones_like(bck_arr), num_bins=50, hist_max=max_hist, hist_min=min_hist, log_plot=True, save_dir="Resolution_Histograms/Log_NoWeight/")
-        plt_2hist("{}_{}_Log_CrossSectionReweighted".format(b, l), "{} {}".format(b, l), sig_arr, bck_arr, np.ones_like(sig_cross_sec),
-                  back_cross_sec, num_bins=50, hist_max=max_hist, hist_min=min_hist, log_plot=True, save_dir="Resolution_Histograms/Log_Weight/")
+        plt_2hist("{}_{}_Log_NoWeighting".format(b, l), text, sig_arr, bck_arr, np.ones_like(sig_arr),
+                  np.ones_like(bck_arr), num_bins=50, hist_max=max_hist, hist_min=min_hist, legloc=legloc, log_plot=True, save_dir="Resolution_Histograms/Log_NoWeight/")
+        plt_2hist("{}_{}_Log_CrossSectionReweighted".format(b, l), text, sig_arr, bck_arr, np.ones_like(sig_cross_sec),
+                  back_cross_sec, num_bins=50, hist_max=max_hist, hist_min=min_hist, legloc=legloc, log_plot=True, save_dir="Resolution_Histograms/Log_Weight/")
         del bck_data
         del sig_data
 

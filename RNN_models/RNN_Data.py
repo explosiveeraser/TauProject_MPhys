@@ -124,6 +124,9 @@ class RNN_Data():
             file.close()
             file = open("{}_untransformed_data".format(self.prong), "rb")
             [track_untrans, tower_untrans, jet_untrans, yval] = pickle.load(file)
+            self.untrans_track = track_untrans
+            self.untrans_tower = tower_untrans
+            self.untrans_jet = jet_untrans
             file.close()
             self.jet_pt = jet_untrans["jet_PT"]
             if print_hists:
@@ -152,6 +155,9 @@ class RNN_Data():
             file.close()
             file = open("{}_untransformed_data".format(self.prong), "rb")
             [track_untrans, tower_untrans, jet_untrans, yval] = pickle.load(file)
+            self.untrans_track = track_untrans
+            self.untrans_tower = tower_untrans
+            self.untrans_jet = jet_untrans
             file.close()
             self.jet_pt = jet_untrans["jet_PT"]
             if print_hists:

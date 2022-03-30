@@ -53,6 +53,8 @@ class Jet_():
         self.Particles = []
         self.TruthTau = {"1-Prong" : False, "3-Prong" : False, "N>3-Prong" : False}
         self.numTaus = 0
+        self.nCoreTracks = 0
+        self.nCoreTowers = 0
         self._Find_Particles(Event_Particles)
         self._Find_Tracks(Event_Tracks)
         self._Find_Towers(Event_Towers)
@@ -103,6 +105,8 @@ class Jet_():
                 check_tr.Jet_Association(self.Eta, self.Phi)
                 self.Tracks.append(check_tr)
                 self.num_tracks += 1
+                if np.sqrt((self.Eta - check_tr.Eta)**2 + (self.Phi - check_tr.Phi)**2) < 0.2:
+                    self.nCoreTracks += 1
 
     def _Find_Towers(self, evt_towers):
         num_towers = len(evt_towers)
@@ -112,6 +116,8 @@ class Jet_():
                 check_to.Jet_Association(self.Eta, self.Phi)
                 self.Towers.append(check_to)
                 self.num_towers += 1
+                if np.sqrt((self.Eta - check_to.Eta)**2 + (self.Phi - check_to.Phi)**2) < 0.2:
+                    self.nCoreTowers += 1
 
     def PT_LC_scale(self):
         pt_lc_scale = 0.

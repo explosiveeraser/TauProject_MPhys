@@ -216,10 +216,10 @@ class Plots():
         self.eff = eff
         self.rej = rej
         fig, ax = plt.subplots()
-        ax.plot(eff, rej, color='g', label='Delphes Tau RNN (Evaluation Sample)')
+        ax.plot(eff, rej, color='g', lw=0.5, label='Delphes Tau RNN (Evaluation Sample)')
         if do_train:
-            ax.plot(eff_train, rej_train, color="b", label="Delphes Tau RNN (Training Sample)")
-        plt.imread("note_roc_curve.png")
+            ax.plot(eff_train, rej_train, color="b", lw=0.5, label="Delphes Tau RNN (Training Sample)")
+
         #ax.set_ylim(self.ylim)
         ax.set_xlim((0., 1.))
         ax.set_ylim((1., 1e4))
@@ -228,6 +228,7 @@ class Plots():
         ax.set_ylabel("Background rejection", y=1, ha="right")
         if self.legend:
             ax.legend()
+        plt.imread("note_roc_curve.png")
         plt.savefig("{}{}.png".format(save_dir, name))
         return fig
 
